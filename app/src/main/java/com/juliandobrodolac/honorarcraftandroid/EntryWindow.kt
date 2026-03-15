@@ -59,6 +59,7 @@ import com.juliandobrodolac.honorarcraftandroid.ui.theme.HonorarCraftAndroidThem
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Locale
 
 @Composable
@@ -68,14 +69,16 @@ fun EntryWindowScreen(
     onTabSelected: (Int) -> Unit
 ) {
     val currentInvoiceWithEntries by mainViewModel.currentInvoiceWithEntries.collectAsState()
-    val currentInvoiceNumber by mainViewModel.selectedInvoiceNumber.collectAsState()
+    val formattedInvoiceNumber by mainViewModel.formattedInvoiceNumber.collectAsState()
     val allInvoiceNumbers by mainViewModel.allInvoiceNumbers.collectAsState()
+    val invoiceFormat by mainViewModel.invoiceFormat.collectAsState()
     val companyData by mainViewModel.companyData.collectAsState()
     val isLoading by mainViewModel.isLoading.collectAsState()
 
     EntryWindowContent(
-        invoiceNumber = currentInvoiceNumber,
+        displayInvoiceNumber = formattedInvoiceNumber,
         allInvoiceNumbers = allInvoiceNumbers,
+        invoiceFormat = invoiceFormat,
         invoiceWithEntries = currentInvoiceWithEntries,
         companyData = companyData,
         isLoading = isLoading,
@@ -98,8 +101,9 @@ fun EntryWindowScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EntryWindowContent(
-    invoiceNumber: String,
+    displayInvoiceNumber: String,
     allInvoiceNumbers: List<String>,
+    invoiceFormat: InvoiceFormat,
     invoiceWithEntries: InvoiceWithEntries?,
     companyData: CompanyData?,
     isLoading: Boolean,
@@ -142,7 +146,7 @@ fun EntryWindowContent(
             )
         } else {
             TopAppBar(
-                title = { Text("Rechnung $invoiceNumber", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                title = { Text("Rechnung $displayInvoiceNumber", maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 actions = {
                     Box {
                         IconButton(onClick = { showMenu = true }) {
@@ -150,8 +154,16 @@ fun EntryWindowContent(
                         }
                         DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                             allInvoiceNumbers.forEach { num ->
+                                val calendar = Calendar.getInstance()
+                                val year = calendar.get(Calendar.YEAR)
+                                val month = calendar.get(Calendar.MONTH) + 1
+                                val formattedNum = when(invoiceFormat) {
+                                    InvoiceFormat.NUMBER -> num
+                                    InvoiceFormat.YEAR_NUMBER -> "$year-$num"
+                                    InvoiceFormat.YEAR_MONTH_NUMBER -> String.format(Locale.GERMANY, "%d-%02d-%s", year, month, num)
+                                }
                                 DropdownMenuItem(
-                                    text = { Text("Rechnung $num") },
+                                    text = { Text("Rechnung $formattedNum") },
                                     onClick = { 
                                         showMenu = false
                                         onInvoiceSelect(num)
@@ -396,8 +408,9 @@ fun EntryCard(
 fun EntryWindowPreview() {
     HonorarCraftAndroidTheme {
         EntryWindowContent(
-            invoiceNumber = "1",
+            displayInvoiceNumber = "1",
             allInvoiceNumbers = listOf("1","2"),
+            invoiceFormat = InvoiceFormat.NUMBER,
             invoiceWithEntries = null,
             companyData = null,
             isLoading = false,

@@ -21,7 +21,10 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -33,6 +36,9 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -46,18 +52,23 @@ import java.util.Locale
 @Composable
 fun DashboardScreen(
     mainViewModel: MainViewModel,
-
 ) {
     val yearlyRevenueState by mainViewModel.yearlyRevenue.collectAsState()
     val selectedYear by mainViewModel.selectedYear.collectAsState()
-    val selectedInvoiceNumber by mainViewModel.selectedInvoiceNumber.collectAsState()
+    val rawInvoiceNumber by mainViewModel.selectedInvoiceNumber.collectAsState()
+    val formattedInvoiceNumber by mainViewModel.formattedInvoiceNumber.collectAsState()
+    val invoiceFormat by mainViewModel.invoiceFormat.collectAsState()
     
     DashboardContent(
         totalSum = yearlyRevenueState,
         selectedYear = selectedYear,
-        invoiceNumber = selectedInvoiceNumber,
-        onYearChange = { mainViewModel.setSelectedYear(it) }
-    ) { mainViewModel.setSelectedInvoiceNumber(it) }
+        rawInvoiceNumber = rawInvoiceNumber,
+        displayInvoiceNumber = formattedInvoiceNumber,
+        invoiceFormat = invoiceFormat,
+        onYearChange = { mainViewModel.setSelectedYear(it) },
+        onInvoiceNumberChange = { mainViewModel.setSelectedInvoiceNumber(it) },
+        onFormatChange = { mainViewModel.setInvoiceFormat(it) }
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -65,12 +76,16 @@ fun DashboardScreen(
 fun DashboardContent(
     totalSum: Double,
     selectedYear: Int,
-    invoiceNumber: String,
+    rawInvoiceNumber: String,
+    displayInvoiceNumber: String,
+    invoiceFormat: InvoiceFormat,
     onYearChange: (Int) -> Unit,
-    onInvoiceNumberChange: (String) -> Unit
+    onInvoiceNumberChange: (String) -> Unit,
+    onFormatChange: (InvoiceFormat) -> Unit
 ) {
     val yearlyRevenueFormatted = String.format(Locale.GERMAN, "%.2f", totalSum)
-    val invoiceNumberInt = invoiceNumber.toIntOrNull() ?: 1
+    val invoiceNumberInt = rawInvoiceNumber.toIntOrNull() ?: 1
+    var showMenu by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
@@ -80,6 +95,39 @@ fun DashboardContent(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+            },
+            actions = {
+                Box {
+                    IconButton(onClick = { showMenu = true }) {
+                        Icon(Icons.Default.Settings, contentDescription = "Einstellungen")
+                    }
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Format: Nr.") },
+                            onClick = {
+                                onFormatChange(InvoiceFormat.NUMBER)
+                                showMenu = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Format: Jahr-Nr.") },
+                            onClick = {
+                                onFormatChange(InvoiceFormat.YEAR_NUMBER)
+                                showMenu = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Format: Jahr-Monat-Nr.") },
+                            onClick = {
+                                onFormatChange(InvoiceFormat.YEAR_MONTH_NUMBER)
+                                showMenu = false
+                            }
+                        )
+                    }
+                }
             },
             colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant,
@@ -110,7 +158,7 @@ fun DashboardContent(
 
                 DashboardControlCard(
                     title = "Rechnungsnummer",
-                    value = invoiceNumber,
+                    value = displayInvoiceNumber,
                     onDecrement = { if (invoiceNumberInt > 0) onInvoiceNumberChange((invoiceNumberInt - 1).toString()) },
                     onIncrement = { onInvoiceNumberChange((invoiceNumberInt + 1).toString()) },
                     decrementIcon = Icons.Default.Remove,
@@ -185,8 +233,12 @@ fun DashboardPreview() {
         DashboardContent(
             totalSum = 12500.0,
             selectedYear = 2026,
-            invoiceNumber = "1",
-            onYearChange = { }
-        ) { }
+            rawInvoiceNumber = "1",
+            displayInvoiceNumber = "1",
+            invoiceFormat = InvoiceFormat.NUMBER,
+            onYearChange = { },
+            onInvoiceNumberChange = { },
+            onFormatChange = { }
+        )
     }
 }

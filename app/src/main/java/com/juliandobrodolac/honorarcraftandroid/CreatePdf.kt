@@ -25,6 +25,12 @@ fun createPdf(
 ) {
     val pdfDocument = PdfDocument()
     
+    // Load saved format
+    val sharedPrefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+    val formatName = sharedPrefs.getString("invoice_format", InvoiceFormat.NUMBER.name) ?: InvoiceFormat.NUMBER.name
+    val format = InvoiceFormat.valueOf(formatName)
+    val displayInvoiceNumber = formatInvoice(invoiceWithEntries.invoice.invoiceNumber, format)
+
     // A4 size in points (72 DPI): 595 x 842
     val pageWidth = 595
     val pageHeight = 842
@@ -89,7 +95,7 @@ fun createPdf(
     y += 35f
 
     // Invoice Number
-    canvas1.drawText("Rechnungsnummer: ${invoiceWithEntries.invoice.invoiceNumber}", leftMargin, y, boldPaint)
+    canvas1.drawText("Rechnung: $displayInvoiceNumber", leftMargin, y, boldPaint)
     y += 25f
 
     // Recipient Info
@@ -235,7 +241,8 @@ fun createPdf(
     }
 
     // --- Save File to Public Documents ---
-    val fileName = "rechnung_${invoiceWithEntries.invoice.invoiceNumber}.pdf"
+    // Use the same formatted number for the filename for consistency
+    val fileName = "rechnung_${displayInvoiceNumber}.pdf"
     
     try {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

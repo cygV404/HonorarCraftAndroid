@@ -1,6 +1,7 @@
 package com.juliandobrodolac.honorarcraftandroid
 
 import android.app.Application
+import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -9,19 +10,28 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+
+enum class InvoiceFormat {
+    NUMBER,
+    YEAR_NUMBER,
+    YEAR_MONTH_NUMBER
+}
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val database = AppDatabase.getDatabase(application)
     private val invoiceDao = database.invoiceDao()
     private val companyDao = database.companyDao()
+    private val sharedPrefs = application.getSharedPreferences("settings", Context.MODE_PRIVATE)
 
     // Loading State
     private val _isLoading = MutableStateFlow(false)
@@ -48,6 +58,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _selectedInvoiceNumber = MutableStateFlow("1")
     val selectedInvoiceNumber: StateFlow<String> = _selectedInvoiceNumber
 
+    private val _invoiceFormat = MutableStateFlow(
+        InvoiceFormat.valueOf(sharedPrefs.getString("invoice_format", InvoiceFormat.NUMBER.name) ?: InvoiceFormat.NUMBER.name)
+    )
+    val invoiceFormat: StateFlow<InvoiceFormat> = _invoiceFormat.asStateFlow()
+
+    val formattedInvoiceNumber: StateFlow<String> = combine(
+        _selectedInvoiceNumber,
+        _invoiceFormat
+    ) { number, format ->
+        formatInvoice(number, format)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "1")
+
     // Form State for CreateInvoice
     private val _currentDate = MutableStateFlow(getCurrentDateFormatted())
     val currentDate: StateFlow<String> = _currentDate.asStateFlow()
@@ -57,6 +79,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _currentSubject = MutableStateFlow("")
     val currentSubject: StateFlow<String> = _currentSubject.asStateFlow()
+
+    private val _lastAddedEntry = MutableStateFlow<InvoiceEntry?>(null)
+    val lastAddedEntry: StateFlow<InvoiceEntry?> = _lastAddedEntry.asStateFlow()
+
+    private val _showEntryConfirmation = MutableStateFlow(false)
+    val showEntryConfirmation: StateFlow<Boolean> = _showEntryConfirmation.asStateFlow()
 
     // Yearly Revenue - reactive to _selectedYear
     val yearlyRevenue: StateFlow<Double> = _selectedYear
@@ -131,6 +159,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _selectedInvoiceNumber.value = number
     }
 
+    fun setInvoiceFormat(format: InvoiceFormat) {
+        _invoiceFormat.value = format
+        sharedPrefs.edit().putString("invoice_format", format.name).apply()
+    }
+
     fun incrementInvoiceNumber() {
         val current = _selectedInvoiceNumber.value.toIntOrNull() ?: 0
         _selectedInvoiceNumber.value = (current + 1).toString()
@@ -184,9 +217,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             )
             invoiceDao.insertEntry(entry)
             
+            _lastAddedEntry.value = entry
+            _showEntryConfirmation.value = true
+            
             _currentHours.value = ""
             _currentSubject.value = ""
             _currentDate.value = getCurrentDateFormatted()
+            
+            delay(4500)
+            _showEntryConfirmation.value = false
         }
     }
 
@@ -238,5 +277,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _hasUnsavedChanges.value = false
             _resetDataWindowTrigger.value += 1
         }
+    }
+}
+
+fun formatInvoice(number: String, format: InvoiceFormat): String {
+    val calendar = Calendar.getInstance()
+    val year = calendar.get(Calendar.YEAR)
+    val month = calendar.get(Calendar.MONTH) + 1
+    
+    return when (format) {
+        InvoiceFormat.NUMBER -> number
+        InvoiceFormat.YEAR_NUMBER -> "$year-$number"
+        InvoiceFormat.YEAR_MONTH_NUMBER -> String.format(Locale.GERMANY, "%d-%02d-%s", year, month, number)
     }
 }
