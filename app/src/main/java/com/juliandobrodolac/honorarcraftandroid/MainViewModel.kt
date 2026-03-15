@@ -5,7 +5,13 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -123,6 +129,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setSelectedInvoiceNumber(number: String) {
         _selectedInvoiceNumber.value = number
+    }
+
+    fun incrementInvoiceNumber() {
+        val current = _selectedInvoiceNumber.value.toIntOrNull() ?: 0
+        _selectedInvoiceNumber.value = (current + 1).toString()
     }
 
     fun updateInvoiceForm(date: String? = null, hours: String? = null, subject: String? = null) {

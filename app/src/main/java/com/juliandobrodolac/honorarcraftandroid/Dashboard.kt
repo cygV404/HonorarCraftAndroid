@@ -1,14 +1,38 @@
 package com.juliandobrodolac.honorarcraftandroid
 
-import androidx.compose.animation.*
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -22,41 +46,31 @@ import java.util.Locale
 @Composable
 fun DashboardScreen(
     mainViewModel: MainViewModel,
-    onNavigateToCreate: () -> Unit,
-    selectedTabIndex: Int,
-    onTabSelected: (Int) -> Unit
+
 ) {
     val yearlyRevenueState by mainViewModel.yearlyRevenue.collectAsState()
+    val selectedYear by mainViewModel.selectedYear.collectAsState()
+    val selectedInvoiceNumber by mainViewModel.selectedInvoiceNumber.collectAsState()
     
     DashboardContent(
         totalSum = yearlyRevenueState,
-        onNavigateToCreate = onNavigateToCreate,
-        selectedTabIndex = selectedTabIndex,
-        onTabSelected = onTabSelected,
-        onYearChange = { year, number ->
-            mainViewModel.setSelectedYear(year)
-            mainViewModel.setSelectedInvoiceNumber(number.toString())
-        }
-    )
+        selectedYear = selectedYear,
+        invoiceNumber = selectedInvoiceNumber,
+        onYearChange = { mainViewModel.setSelectedYear(it) }
+    ) { mainViewModel.setSelectedInvoiceNumber(it) }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardContent(
     totalSum: Double,
-    onNavigateToCreate: () -> Unit,
-    selectedTabIndex: Int,
-    onTabSelected: (Int) -> Unit,
-    onYearChange: (Int, Int) -> Unit
+    selectedYear: Int,
+    invoiceNumber: String,
+    onYearChange: (Int) -> Unit,
+    onInvoiceNumberChange: (String) -> Unit
 ) {
-    var selectedYear by remember { mutableIntStateOf(2026) }
-    var invoiceNumberValue by remember { mutableIntStateOf(1) }
-
-    LaunchedEffect(selectedYear, invoiceNumberValue) {
-        onYearChange(selectedYear, invoiceNumberValue)
-    }
-
     val yearlyRevenueFormatted = String.format(Locale.GERMAN, "%.2f", totalSum)
+    val invoiceNumberInt = invoiceNumber.toIntOrNull() ?: 1
 
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
@@ -88,17 +102,17 @@ fun DashboardContent(
                 DashboardControlCard(
                     title = "Jahresumsatz $selectedYear",
                     value = "$yearlyRevenueFormatted €",
-                    onDecrement = { if (selectedYear > 2000) selectedYear-- },
-                    onIncrement = { selectedYear++ },
+                    onDecrement = { if (selectedYear > 2000) onYearChange(selectedYear - 1) },
+                    onIncrement = { onYearChange(selectedYear + 1) },
                     decrementIcon = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
                     incrementIcon = Icons.AutoMirrored.Filled.KeyboardArrowRight
                 )
 
                 DashboardControlCard(
                     title = "Rechnungsnummer",
-                    value = invoiceNumberValue.toString(),
-                    onDecrement = { if (invoiceNumberValue > 0) invoiceNumberValue-- },
-                    onIncrement = { invoiceNumberValue++ },
+                    value = invoiceNumber,
+                    onDecrement = { if (invoiceNumberInt > 0) onInvoiceNumberChange((invoiceNumberInt - 1).toString()) },
+                    onIncrement = { onInvoiceNumberChange((invoiceNumberInt + 1).toString()) },
                     decrementIcon = Icons.Default.Remove,
                     incrementIcon = Icons.Default.Add
                 )
@@ -170,10 +184,9 @@ fun DashboardPreview() {
     HonorarCraftAndroidTheme {
         DashboardContent(
             totalSum = 12500.0,
-            onNavigateToCreate = {},
-            selectedTabIndex = 0,
-            onTabSelected = {},
-            onYearChange = { _, _ -> }
-        )
+            selectedYear = 2026,
+            invoiceNumber = "1",
+            onYearChange = { }
+        ) { }
     }
 }

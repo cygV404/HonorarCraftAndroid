@@ -14,8 +14,17 @@ import androidx.compose.material.icons.filled.AddCard
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.juliandobrodolac.honorarcraftandroid.ui.theme.HonorarCraftAndroidTheme
@@ -107,10 +116,7 @@ class MainActivity : ComponentActivity() {
                     ) { page ->
                         when (page) {
                             0 -> DashboardScreen(
-                                mainViewModel = mainViewModel,
-                                onNavigateToCreate = { mainViewModel.setSelectedTabIndex(1) },
-                                selectedTabIndex = selectedTabIndex,
-                                onTabSelected = { mainViewModel.setSelectedTabIndex(it) }
+                                mainViewModel = mainViewModel
                             )
                             1 -> CreateInvoiceScreen(
                                 mainViewModel = mainViewModel,
