@@ -28,24 +28,15 @@ data class InvoiceWithEntries(
     )
     val entries: List<InvoiceEntry>
 ) {
-    // --- Business Logic from the original class, adapted for BigDecimal ---
-
-    private fun calculateCorrectedHours(units: BigDecimal): BigDecimal {
-        return units.multiply(BigDecimal("60"))
-            .divide(BigDecimal("45"), 10, RoundingMode.HALF_UP)
-    }
-
-
     val totalSum: BigDecimal
         get() = entries.fold(BigDecimal.ZERO) { acc, entry ->
-            val ue = calculateCorrectedHours(entry.lessonUnits)
-            acc.add(ue.multiply(invoice.rate))
+            acc.add(entry.lessonUnits.multiply(invoice.rate))
         }.setScale(2, RoundingMode.HALF_UP)
 
 
     val totalLessonUnit: BigDecimal
         get() = entries.fold(BigDecimal.ZERO) { acc, entry ->
-            acc.add(calculateCorrectedHours(entry.lessonUnits))
+            acc.add(entry.lessonUnits)
         }.setScale(2, RoundingMode.HALF_UP)
 
 }

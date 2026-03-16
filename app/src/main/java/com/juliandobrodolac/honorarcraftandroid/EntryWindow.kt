@@ -267,8 +267,7 @@ fun EntryWindowContent(
                         key = { it.id }
                     ) { entry ->
                         val rate = invoiceWithEntries?.invoice?.rate ?: BigDecimal.ZERO
-                        val ueValue = entry.lessonUnits.multiply(BigDecimal("60"))
-                            .divide(BigDecimal("45"), 10, RoundingMode.HALF_UP)
+                        val ueValue = entry.lessonUnits // No more conversion here
                         val entrySum = ueValue.multiply(rate).setScale(2, RoundingMode.HALF_UP)
 
                         EntryCard(

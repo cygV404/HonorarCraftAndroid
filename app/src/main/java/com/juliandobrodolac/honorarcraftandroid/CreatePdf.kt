@@ -250,8 +250,7 @@ fun createPdf(
                 )
             }
 
-            val ue = entry.lessonUnits.multiply(BigDecimal("60"))
-                .divide(BigDecimal("45"), 10, RoundingMode.HALF_UP)
+            val ue = entry.lessonUnits // No conversion needed anymore
             val cost = ue.multiply(invoiceWithEntries.invoice.rate).setScale(2, RoundingMode.HALF_UP)
 
             tableCanvas.drawText(entry.date, leftMargin, currentY, textPaint)
