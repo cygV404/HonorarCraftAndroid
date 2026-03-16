@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.juliandobrodolac.honorarcraftandroid"
+    namespace = "de.v404.honorarcraftandroid"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.juliandobrodolac.honorarcraftandroid"
+        applicationId = "de.v404.honorarcraft"
         minSdk = 24
         targetSdk = 35
         versionCode = 1
@@ -34,6 +34,10 @@ android {
     buildFeatures {
         compose = true
     }
+}
+
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
 }
 
 dependencies {

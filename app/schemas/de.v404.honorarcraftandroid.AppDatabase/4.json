@@ -1,0 +1,271 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 4,
+    "identityHash": "e6f1985cc9ce0e8ec45b9ec8c2fc7915",
+    "entities": [
+      {
+        "tableName": "invoices",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`invoiceNumber` TEXT NOT NULL, `rate` TEXT NOT NULL, PRIMARY KEY(`invoiceNumber`))",
+        "fields": [
+          {
+            "fieldPath": "invoiceNumber",
+            "columnName": "invoiceNumber",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "rate",
+            "columnName": "rate",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "invoiceNumber"
+          ]
+        }
+      },
+      {
+        "tableName": "invoice_entries",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `invoiceNumber` TEXT NOT NULL, `date` TEXT NOT NULL, `lessonUnits` TEXT NOT NULL, `teachingSubject` TEXT NOT NULL, FOREIGN KEY(`invoiceNumber`) REFERENCES `invoices`(`invoiceNumber`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "invoiceNumber",
+            "columnName": "invoiceNumber",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "date",
+            "columnName": "date",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lessonUnits",
+            "columnName": "lessonUnits",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "teachingSubject",
+            "columnName": "teachingSubject",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_invoice_entries_invoiceNumber",
+            "unique": false,
+            "columnNames": [
+              "invoiceNumber"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_invoice_entries_invoiceNumber` ON `${TABLE_NAME}` (`invoiceNumber`)"
+          },
+          {
+            "name": "index_invoice_entries_teachingSubject",
+            "unique": false,
+            "columnNames": [
+              "teachingSubject"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_invoice_entries_teachingSubject` ON `${TABLE_NAME}` (`teachingSubject`)"
+          },
+          {
+            "name": "index_invoice_entries_date",
+            "unique": false,
+            "columnNames": [
+              "date"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_invoice_entries_date` ON `${TABLE_NAME}` (`date`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "invoices",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "invoiceNumber"
+            ],
+            "referencedColumns": [
+              "invoiceNumber"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "company_data",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `eduCenter` TEXT NOT NULL, `locationNr` TEXT NOT NULL, `schoolType` TEXT NOT NULL, `customerSecondNameOrOrga` TEXT NOT NULL, `customerFirstName` TEXT NOT NULL, `customerPlz` TEXT NOT NULL, `customerCityName` TEXT NOT NULL, `customerMailBox` TEXT NOT NULL, `customerStreet` TEXT NOT NULL, `customerStreetNumber` TEXT NOT NULL, `billerSecondName` TEXT NOT NULL, `billerFirstName` TEXT NOT NULL, `billerStreetName` TEXT NOT NULL, `billerStreetNumber` TEXT NOT NULL, `billerPlzNumber` TEXT NOT NULL, `billerCityName` TEXT NOT NULL, `taxNumber` TEXT NOT NULL, `billerIban` TEXT NOT NULL, `billerBIC` TEXT NOT NULL, `rate` TEXT NOT NULL, `signaturePath` TEXT NOT NULL, `pdfPath` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "eduCenter",
+            "columnName": "eduCenter",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "locationNr",
+            "columnName": "locationNr",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "schoolType",
+            "columnName": "schoolType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "customerSecondNameOrOrga",
+            "columnName": "customerSecondNameOrOrga",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "customerFirstName",
+            "columnName": "customerFirstName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "customerPlz",
+            "columnName": "customerPlz",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "customerCityName",
+            "columnName": "customerCityName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "customerMailBox",
+            "columnName": "customerMailBox",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "customerStreet",
+            "columnName": "customerStreet",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "customerStreetNumber",
+            "columnName": "customerStreetNumber",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "billerSecondName",
+            "columnName": "billerSecondName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "billerFirstName",
+            "columnName": "billerFirstName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "billerStreetName",
+            "columnName": "billerStreetName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "billerStreetNumber",
+            "columnName": "billerStreetNumber",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "billerPlzNumber",
+            "columnName": "billerPlzNumber",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "billerCityName",
+            "columnName": "billerCityName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "taxNumber",
+            "columnName": "taxNumber",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "billerIban",
+            "columnName": "billerIban",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "billerBIC",
+            "columnName": "billerBIC",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "rate",
+            "columnName": "rate",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "signaturePath",
+            "columnName": "signaturePath",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pdfPath",
+            "columnName": "pdfPath",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'e6f1985cc9ce0e8ec45b9ec8c2fc7915')"
+    ]
+  }
+}
