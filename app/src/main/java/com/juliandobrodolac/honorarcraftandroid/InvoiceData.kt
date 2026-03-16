@@ -33,13 +33,11 @@ data class InvoiceWithEntries(
     }
 
 
-
     val totalSum: Double
         get() = entries.sumOf { entry ->
             val ue = calculateCorrectedHours(entry.lessonUnits)
             ue * invoice.rate
         }
-
 
 
     val totalLessonUnit: Double

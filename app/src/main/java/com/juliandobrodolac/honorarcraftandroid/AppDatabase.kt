@@ -42,12 +42,14 @@ interface InvoiceDao {
     @Query("SELECT invoiceNumber FROM invoices")
     fun getAllInvoiceNumbers(): Flow<List<String>>
 
-    @Query("""
+    @Query(
+        """
         SELECT SUM((e.lessonUnits * 60.0 / 45.0) * i.rate) 
         FROM invoice_entries e 
         JOIN invoices i ON e.invoiceNumber = i.invoiceNumber 
         WHERE e.date LIKE '%' || :year
-    """)
+    """
+    )
     fun getRevenueForYear(year: String): Flow<Double?>
 }
 
@@ -75,7 +77,9 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "honorarcraft_database"
-                ).build()
+                )
+                    .fallbackToDestructiveMigration()
+                    .build()
                 INSTANCE = instance
                 instance
             }

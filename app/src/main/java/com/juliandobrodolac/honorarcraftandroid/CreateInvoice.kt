@@ -24,7 +24,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.FormatListNumbered
-import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -77,7 +76,7 @@ fun CreateInvoiceScreen(
     val formattedInvoiceNumber by mainViewModel.formattedInvoiceNumber.collectAsState()
     val allInvoiceNumbers by mainViewModel.allInvoiceNumbers.collectAsState()
     val invoiceFormat by mainViewModel.invoiceFormat.collectAsState()
-    
+
     val datum by mainViewModel.currentDate.collectAsState()
     val stunden by mainViewModel.currentHours.collectAsState()
     val klasseFach by mainViewModel.currentSubject.collectAsState()
@@ -86,7 +85,7 @@ fun CreateInvoiceScreen(
     val lastAddedEntry by mainViewModel.lastAddedEntry.collectAsState()
     val showConfirmation by mainViewModel.showEntryConfirmation.collectAsState()
     val companyData by mainViewModel.companyData.collectAsState()
-    
+
     CreateInvoiceContent(
         displayInvoiceNumber = formattedInvoiceNumber,
         allInvoiceNumbers = allInvoiceNumbers,
@@ -130,42 +129,59 @@ fun CreateInvoiceContent(
     var showMenu by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
     val datePickerState = rememberDatePickerState()
-    
+
     val focusRequesterStunden = remember { FocusRequester() }
     val focusRequesterSubject = remember { FocusRequester() }
 
     var expandedSubject by remember { mutableStateOf(false) }
-    
+
     // Filter logic: Show all if empty, otherwise filter by start. Sorted by frequency (handled by DAO).
     val filteredSubjects = if (klasseFach.isBlank()) {
         uniqueSubjects
     } else {
         uniqueSubjects.filter {
-            it.startsWith(klasseFach, ignoreCase = true) && it.equals(klasseFach, ignoreCase = true).not()
+            it.startsWith(klasseFach, ignoreCase = true) && it.equals(klasseFach, ignoreCase = true)
+                .not()
         }
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
-            title = { Text("Rechnung $displayInvoiceNumber", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+            title = {
+                Text(
+                    "Rechnung $displayInvoiceNumber",
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            },
             actions = {
                 Box {
                     IconButton(onClick = { showMenu = true }) {
-                        Icon(Icons.Default.FormatListNumbered, contentDescription = "Optionen", modifier = Modifier.size(32.dp))
+                        Icon(
+                            Icons.Default.FormatListNumbered,
+                            contentDescription = "Optionen",
+                            modifier = Modifier.size(32.dp)
+                        )
                     }
                     DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                         allInvoiceNumbers.forEach { num ->
                             val calendar = Calendar.getInstance()
                             val year = calendar.get(Calendar.YEAR)
                             val month = calendar.get(Calendar.MONTH) + 1
-                            val formattedNum = when(invoiceFormat) {
+                            val formattedNum = when (invoiceFormat) {
                                 InvoiceFormat.NUMBER -> num
                                 InvoiceFormat.YEAR_NUMBER -> "$year-$num"
-                                InvoiceFormat.YEAR_MONTH_NUMBER -> String.format(Locale.GERMANY, "%d-%02d-%s", year, month, num)
+                                InvoiceFormat.YEAR_MONTH_NUMBER -> String.format(
+                                    Locale.GERMANY,
+                                    "%d-%02d-%s",
+                                    year,
+                                    month,
+                                    num
+                                )
                             }
                             DropdownMenuItem(
                                 text = { Text("Rechnung $formattedNum") },
-                                onClick = { 
+                                onClick = {
                                     showMenu = false
                                     onInvoiceSelect(num)
                                 }
@@ -179,13 +195,15 @@ fun CreateInvoiceContent(
                 titleContentColor = MaterialTheme.colorScheme.primary,
             )
         )
-        
+
         Box(modifier = Modifier.weight(1f)) {
             // Main content area with background and centered form
-            Box(modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)) {
-                
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background)
+            ) {
+
                 Column(
                     modifier = Modifier
                         .width(380.dp)
@@ -204,7 +222,10 @@ fun CreateInvoiceContent(
                             singleLine = true,
                             trailingIcon = {
                                 IconButton(onClick = { showDatePicker = true }) {
-                                    Icon(Icons.Default.CalendarToday, contentDescription = "Datum wählen")
+                                    Icon(
+                                        Icons.Default.CalendarToday,
+                                        contentDescription = "Datum wählen"
+                                    )
                                 }
                             }
                         )
@@ -239,7 +260,7 @@ fun CreateInvoiceContent(
                     ) {
                         OutlinedTextField(
                             value = klasseFach,
-                            onValueChange = { 
+                            onValueChange = {
                                 onUpdateForm(null, null, it)
                                 expandedSubject = true
                             },
@@ -252,7 +273,7 @@ fun CreateInvoiceContent(
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                             keyboardActions = KeyboardActions(
-                                onDone = { 
+                                onDone = {
                                     expandedSubject = false
                                     if (datum.isNotBlank() && stunden.isNotBlank()) {
                                         onAddEntry()
@@ -281,13 +302,19 @@ fun CreateInvoiceContent(
                                                     style = MaterialTheme.typography.bodyMedium
                                                 )
                                                 IconButton(
-                                                    onClick = { onDeleteSubjectSuggestion(selectionOption) },
+                                                    onClick = {
+                                                        onDeleteSubjectSuggestion(
+                                                            selectionOption
+                                                        )
+                                                    },
                                                     modifier = Modifier.size(24.dp)
                                                 ) {
                                                     Icon(
                                                         imageVector = Icons.Default.Clear,
                                                         contentDescription = "Löschen",
-                                                        tint = MaterialTheme.colorScheme.error.copy(alpha = 0.6f),
+                                                        tint = MaterialTheme.colorScheme.error.copy(
+                                                            alpha = 0.6f
+                                                        ),
                                                         modifier = Modifier.size(16.dp)
                                                     )
                                                 }
@@ -297,7 +324,10 @@ fun CreateInvoiceContent(
                                             onUpdateForm(null, null, selectionOption)
                                             expandedSubject = false
                                         },
-                                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)
+                                        contentPadding = PaddingValues(
+                                            horizontal = 16.dp,
+                                            vertical = 4.dp
+                                        )
                                     )
                                 }
                             }
@@ -307,7 +337,7 @@ fun CreateInvoiceContent(
             }
 
             // Floating Confirmation Card overlaying the top (using the top-level AnimatedVisibility)
-            androidx.compose.animation.AnimatedVisibility(
+            AnimatedVisibility(
                 visible = showConfirmation && lastAddedEntry != null,
                 enter = fadeIn() + expandVertically(),
                 exit = fadeOut() + shrinkVertically(),
@@ -321,7 +351,7 @@ fun CreateInvoiceContent(
                     val rate = companyData?.rate?.toDoubleOrNull() ?: 23.0
                     val ueValue = (entry.lessonUnits * 60) / 45
                     val entrySum = ueValue * rate
-                    
+
                     val formattedUe = String.format(Locale.GERMAN, "%.2f UE", ueValue)
                     val formattedTotal = String.format(Locale.GERMAN, "%.2f €", entrySum)
 
@@ -420,7 +450,7 @@ fun CreateInvoicePreview() {
     HonorarCraftAndroidTheme {
         CreateInvoiceContent(
             displayInvoiceNumber = "1",
-            allInvoiceNumbers = listOf("1","2"),
+            allInvoiceNumbers = listOf("1", "2"),
             invoiceFormat = InvoiceFormat.NUMBER,
             datum = "01.01.2024",
             stunden = "2.0",

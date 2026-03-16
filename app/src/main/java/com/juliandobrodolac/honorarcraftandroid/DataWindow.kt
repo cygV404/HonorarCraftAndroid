@@ -71,7 +71,7 @@ fun DataWindowScreen(
     val savedData by mainViewModel.companyData.collectAsState()
     val isLoading by mainViewModel.isLoading.collectAsState()
     val resetTrigger by mainViewModel.resetDataWindowTrigger.collectAsState()
-    
+
     // key(resetTrigger) sorgt dafür, dass die gesamte Content-Composable neu initialisiert wird,
     // wenn "Verwerfen" geklickt wird oder die Daten hart zurückgesetzt werden.
     key(resetTrigger) {
@@ -101,14 +101,14 @@ fun DataWindowContent(
     onTabSelected: (Int) -> Unit
 ) {
     val context = LocalContext.current
-    
+
     // Initialisierung des lokalen Zustands mit den Daten aus der Datenbank.
     // Da diese Composable durch key(resetTrigger) neu erstellt wird, 
     // greift remember hier jedes Mal neu mit den Originaldaten.
     var companyDataState by remember(savedData) {
         mutableStateOf(savedData?.copy() ?: CompanyData())
     }
-    
+
     var showMenu by remember { mutableStateOf(false) }
     var showResetAllDialog by remember { mutableStateOf(false) }
     var showResetCompanyDialog by remember { mutableStateOf(false) }
@@ -134,12 +134,20 @@ fun DataWindowContent(
     if (showResetAllDialog) {
         AlertDialog(
             onDismissRequest = { showResetAllDialog = false },
-            icon = { Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+            icon = {
+                Icon(
+                    Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error
+                )
+            },
             title = { Text("Werkseinstellungen") },
-            text = { 
-                Text("Möchten Sie wirklich alle Daten zurücksetzen? " +
-                     "Dabei werden alle Kundendaten, Rechnungen und Rechnungsnummern gelöscht. " +
-                     "Bereits generierte PDF-Dateien bleiben davon unberührt.") 
+            text = {
+                Text(
+                    "Möchten Sie wirklich alle Daten zurücksetzen? " +
+                            "Dabei werden alle Kundendaten, Rechnungen und Rechnungsnummern gelöscht. " +
+                            "Bereits generierte PDF-Dateien bleiben davon unberührt."
+                )
             },
             confirmButton = {
                 TextButton(
@@ -163,11 +171,19 @@ fun DataWindowContent(
     if (showResetCompanyDialog) {
         AlertDialog(
             onDismissRequest = { showResetCompanyDialog = false },
-            icon = { Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+            icon = {
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error
+                )
+            },
             title = { Text("Datenfelder leeren") },
-            text = { 
-                Text("Möchten Sie nur die persönlichen Datenfelder und Firmendaten leeren? " +
-                     "Ihre Rechnungen und Einträge bleiben erhalten.") 
+            text = {
+                Text(
+                    "Möchten Sie nur die persönlichen Datenfelder und Firmendaten leeren? " +
+                            "Ihre Rechnungen und Einträge bleiben erhalten."
+                )
             },
             confirmButton = {
                 TextButton(
@@ -222,42 +238,178 @@ fun DataWindowContent(
             }
         )
 
-        Box(modifier = Modifier.weight(1f).background(MaterialTheme.colorScheme.background)) {
+        Box(modifier = Modifier
+            .weight(1f)
+            .background(MaterialTheme.colorScheme.background)) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(16.dp, 16.dp, 16.dp, 100.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 item { SectionHeader("Kundendaten") }
-                item { DataField(label = "Bildungszentrum", value = companyDataState.eduCenter, onValueChange = { companyDataState = companyDataState.copy(eduCenter = it); onChanged() }) }
-                item { DataField(label = "Standort Nr", value = companyDataState.locationNr, onValueChange = { companyDataState = companyDataState.copy(locationNr = it); onChanged() }) }
-                item { DataField(label = "Schulart/Maßnahme", value = companyDataState.schoolType, onValueChange = { companyDataState = companyDataState.copy(schoolType = it); onChanged() }) }
-                item { DataField(label = "Name/Orga", value = companyDataState.customerSecondNameOrOrga, onValueChange = { companyDataState = companyDataState.copy(customerSecondNameOrOrga = it); onChanged() }) }
-                item { DataField(label = "Vorname", value = companyDataState.customerFirstName, onValueChange = { companyDataState = companyDataState.copy(customerFirstName = it); onChanged() }) }
-                item { DataField(label = "Straße", value = companyDataState.customerStreet, onValueChange = { companyDataState = companyDataState.copy(customerStreet = it); onChanged() }) }
-                item { DataField(label = "Hausnummer", value = companyDataState.customerStreetNumber, onValueChange = { companyDataState = companyDataState.copy(customerStreetNumber = it); onChanged() }) }
-                item { DataField(label = "PLZ", value = companyDataState.customerPlz, onValueChange = { companyDataState = companyDataState.copy(customerPlz = it); onChanged() }) }
-                item { DataField(label = "Postfach", value = companyDataState.customerMailBox, onValueChange = { companyDataState = companyDataState.copy(customerMailBox = it); onChanged() }) }
-                item { DataField(label = "Ort", value = companyDataState.customerCityName, onValueChange = { companyDataState = companyDataState.copy(customerCityName = it); onChanged() }) }
+                item {
+                    DataField(
+                        label = "Bildungszentrum",
+                        value = companyDataState.eduCenter,
+                        onValueChange = {
+                            companyDataState = companyDataState.copy(eduCenter = it); onChanged()
+                        })
+                }
+                item {
+                    DataField(
+                        label = "Standort Nr",
+                        value = companyDataState.locationNr,
+                        onValueChange = {
+                            companyDataState = companyDataState.copy(locationNr = it); onChanged()
+                        })
+                }
+                item {
+                    DataField(
+                        label = "Schulart/Maßnahme",
+                        value = companyDataState.schoolType,
+                        onValueChange = {
+                            companyDataState = companyDataState.copy(schoolType = it); onChanged()
+                        })
+                }
+                item {
+                    DataField(
+                        label = "Name/Orga",
+                        value = companyDataState.customerSecondNameOrOrga,
+                        onValueChange = {
+                            companyDataState =
+                                companyDataState.copy(customerSecondNameOrOrga = it); onChanged()
+                        })
+                }
+                item {
+                    DataField(
+                        label = "Vorname",
+                        value = companyDataState.customerFirstName,
+                        onValueChange = {
+                            companyDataState =
+                                companyDataState.copy(customerFirstName = it); onChanged()
+                        })
+                }
+                item {
+                    DataField(
+                        label = "Straße",
+                        value = companyDataState.customerStreet,
+                        onValueChange = {
+                            companyDataState =
+                                companyDataState.copy(customerStreet = it); onChanged()
+                        })
+                }
+                item {
+                    DataField(
+                        label = "Hausnummer",
+                        value = companyDataState.customerStreetNumber,
+                        onValueChange = {
+                            companyDataState =
+                                companyDataState.copy(customerStreetNumber = it); onChanged()
+                        })
+                }
+                item {
+                    DataField(
+                        label = "PLZ",
+                        value = companyDataState.customerPlz,
+                        onValueChange = {
+                            companyDataState = companyDataState.copy(customerPlz = it); onChanged()
+                        })
+                }
+                item {
+                    DataField(
+                        label = "Postfach",
+                        value = companyDataState.customerMailBox,
+                        onValueChange = {
+                            companyDataState =
+                                companyDataState.copy(customerMailBox = it); onChanged()
+                        })
+                }
+                item {
+                    DataField(
+                        label = "Ort",
+                        value = companyDataState.customerCityName,
+                        onValueChange = {
+                            companyDataState =
+                                companyDataState.copy(customerCityName = it); onChanged()
+                        })
+                }
 
                 item { SectionHeader("Meine Daten") }
-                item { DataField(label = "Name", value = companyDataState.billerSecondName, onValueChange = { companyDataState = companyDataState.copy(billerSecondName = it); onChanged() }) }
-                item { DataField(label = "Vorname", value = companyDataState.billerFirstName, onValueChange = { companyDataState = companyDataState.copy(billerFirstName = it); onChanged() }) }
-                item { DataField(label = "Straße", value = companyDataState.billerStreetName, onValueChange = { companyDataState = companyDataState.copy(billerStreetName = it); onChanged() }) }
-                item { DataField(label = "Hausnummer", value = companyDataState.billerStreetNumber, onValueChange = { companyDataState = companyDataState.copy(billerStreetNumber = it); onChanged() }) }
-                item { DataField(label = "PLZ", value = companyDataState.billerPlzNumber, onValueChange = { companyDataState = companyDataState.copy(billerPlzNumber = it); onChanged() }) }
-                item { DataField(label = "Ort", value = companyDataState.billerCityName, onValueChange = { companyDataState = companyDataState.copy(billerCityName = it); onChanged() }) }
-                
+                item {
+                    DataField(
+                        label = "Name",
+                        value = companyDataState.billerSecondName,
+                        onValueChange = {
+                            companyDataState =
+                                companyDataState.copy(billerSecondName = it); onChanged()
+                        })
+                }
+                item {
+                    DataField(
+                        label = "Vorname",
+                        value = companyDataState.billerFirstName,
+                        onValueChange = {
+                            companyDataState =
+                                companyDataState.copy(billerFirstName = it); onChanged()
+                        })
+                }
+                item {
+                    DataField(
+                        label = "Straße",
+                        value = companyDataState.billerStreetName,
+                        onValueChange = {
+                            companyDataState =
+                                companyDataState.copy(billerStreetName = it); onChanged()
+                        })
+                }
+                item {
+                    DataField(
+                        label = "Hausnummer",
+                        value = companyDataState.billerStreetNumber,
+                        onValueChange = {
+                            companyDataState =
+                                companyDataState.copy(billerStreetNumber = it); onChanged()
+                        })
+                }
+                item {
+                    DataField(
+                        label = "PLZ",
+                        value = companyDataState.billerPlzNumber,
+                        onValueChange = {
+                            companyDataState =
+                                companyDataState.copy(billerPlzNumber = it); onChanged()
+                        })
+                }
+                item {
+                    DataField(
+                        label = "Ort",
+                        value = companyDataState.billerCityName,
+                        onValueChange = {
+                            companyDataState =
+                                companyDataState.copy(billerCityName = it); onChanged()
+                        })
+                }
+
                 // Signature Picker
                 item {
-                    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-                        Text("Unterschrift (PNG)", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                    Column(modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp)) {
+                        Text(
+                            "Unterschrift (PNG)",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
                         Spacer(modifier = Modifier.height(4.dp))
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(120.dp)
-                                .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.extraSmall)
+                                .border(
+                                    1.dp,
+                                    MaterialTheme.colorScheme.outline,
+                                    MaterialTheme.shapes.extraSmall
+                                )
                                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                                 .clickable { launcher.launch("image/png") },
                             contentAlignment = Alignment.Center
@@ -267,16 +419,21 @@ fun DataWindowContent(
                                     Image(
                                         painter = rememberAsyncImagePainter(File(companyDataState.signaturePath)),
                                         contentDescription = "Unterschrift Vorschau",
-                                        modifier = Modifier.fillMaxSize().padding(8.dp),
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(8.dp),
                                         contentScale = ContentScale.Fit
                                     )
                                     // Delete/Clear Button
                                     IconButton(
-                                        onClick = { 
-                                            companyDataState = companyDataState.copy(signaturePath = "")
+                                        onClick = {
+                                            companyDataState =
+                                                companyDataState.copy(signaturePath = "")
                                             onChanged()
                                         },
-                                        modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)
+                                        modifier = Modifier
+                                            .align(Alignment.TopEnd)
+                                            .padding(4.dp)
                                     ) {
                                         Icon(
                                             Icons.Default.Close,
@@ -287,8 +444,16 @@ fun DataWindowContent(
                                 }
                             } else {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Icon(Icons.Default.Image, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text("PNG auswählen", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Icon(
+                                        Icons.Default.Image,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        "PNG auswählen",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                 }
                             }
                         }
@@ -296,15 +461,45 @@ fun DataWindowContent(
                 }
 
                 item { SectionHeader("Finanzdaten") }
-                item { DataField(label = "Steuernummer", value = companyDataState.taxNumber, onValueChange = { companyDataState = companyDataState.copy(taxNumber = it); onChanged() }) }
-                item { DataField(label = "IBAN", value = companyDataState.billerIban, onValueChange = { companyDataState = companyDataState.copy(billerIban = it); onChanged() }) }
-                item { DataField(label = "BIC", value = companyDataState.billerBIC, onValueChange = { companyDataState = companyDataState.copy(billerBIC = it); onChanged() }) }
-                item { DataField(label = "Honorarsatz €", value = companyDataState.rate, onValueChange = { companyDataState = companyDataState.copy(rate = it); onChanged() }) }
+                item {
+                    DataField(
+                        label = "Steuernummer",
+                        value = companyDataState.taxNumber,
+                        onValueChange = {
+                            companyDataState = companyDataState.copy(taxNumber = it); onChanged()
+                        })
+                }
+                item {
+                    DataField(
+                        label = "IBAN",
+                        value = companyDataState.billerIban,
+                        onValueChange = {
+                            companyDataState = companyDataState.copy(billerIban = it); onChanged()
+                        })
+                }
+                item {
+                    DataField(
+                        label = "BIC",
+                        value = companyDataState.billerBIC,
+                        onValueChange = {
+                            companyDataState = companyDataState.copy(billerBIC = it); onChanged()
+                        })
+                }
+                item {
+                    DataField(
+                        label = "Honorarsatz €",
+                        value = companyDataState.rate,
+                        onValueChange = {
+                            companyDataState = companyDataState.copy(rate = it); onChanged()
+                        })
+                }
             }
 
             FloatingActionButton(
                 onClick = { onSave(companyDataState) },
-                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp),
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
             ) {
@@ -333,7 +528,11 @@ fun SectionHeader(text: String) {
     Text(
         text = text,
         modifier = Modifier.padding(vertical = 8.dp),
-        style = TextStyle(fontWeight = FontWeight(600), fontSize = 14.sp, color = MaterialTheme.colorScheme.primary)
+        style = TextStyle(
+            fontWeight = FontWeight(600),
+            fontSize = 14.sp,
+            color = MaterialTheme.colorScheme.primary
+        )
     )
 }
 

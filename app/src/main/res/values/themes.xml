@@ -2,4 +2,13 @@
 <resources>
 
     <style name="Theme.HonorarCraftAndroid" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
+        <!-- Background of the splash screen -->
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <!-- Icon to be shown in the center -->
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <!-- Theme to switch to after the splash screen is done -->
+        <item name="postSplashScreenTheme">@style/Theme.HonorarCraftAndroid</item>
+    </style>
 </resources>

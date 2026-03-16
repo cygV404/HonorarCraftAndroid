@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -46,7 +47,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _pendingTabIndex = MutableStateFlow<Int?>(null)
     val pendingTabIndex: StateFlow<Int?> = _pendingTabIndex.asStateFlow()
-    
+
     // Trigger to reset UI state in DataWindow (increments to force a discard)
     private val _resetDataWindowTrigger = MutableStateFlow(0)
     val resetDataWindowTrigger: StateFlow<Int> = _resetDataWindowTrigger.asStateFlow()
@@ -59,7 +60,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val selectedInvoiceNumber: StateFlow<String> = _selectedInvoiceNumber
 
     private val _invoiceFormat = MutableStateFlow(
-        InvoiceFormat.valueOf(sharedPrefs.getString("invoice_format", InvoiceFormat.NUMBER.name) ?: InvoiceFormat.NUMBER.name)
+        InvoiceFormat.valueOf(
+            sharedPrefs.getString("invoice_format", InvoiceFormat.NUMBER.name)
+                ?: InvoiceFormat.NUMBER.name
+        )
     )
     val invoiceFormat: StateFlow<InvoiceFormat> = _invoiceFormat.asStateFlow()
 
@@ -86,10 +90,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _showEntryConfirmation = MutableStateFlow(false)
     val showEntryConfirmation: StateFlow<Boolean> = _showEntryConfirmation.asStateFlow()
 
+    private var confirmationJob: Job? = null
+
     // Yearly Revenue - reactive to _selectedYear
     val yearlyRevenue: StateFlow<Double> = _selectedYear
-        .flatMapLatest { year -> 
-            invoiceDao.getRevenueForYear(year.toString()) 
+        .flatMapLatest { year ->
+            invoiceDao.getRevenueForYear(year.toString())
         }
         .map { it ?: 0.0 }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
@@ -195,7 +201,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val datum = _currentDate.value
         val stunden = _currentHours.value
         val klasseFach = _currentSubject.value
-        
+
         if (datum.isBlank() || stunden.isBlank()) return
 
         val number = _selectedInvoiceNumber.value
@@ -216,16 +222,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 teachingSubject = klasseFach
             )
             invoiceDao.insertEntry(entry)
-            
+
+            // Manage confirmation visibility with cancellation of previous job
+            confirmationJob?.cancel()
             _lastAddedEntry.value = entry
             _showEntryConfirmation.value = true
-            
+
             _currentHours.value = ""
             _currentSubject.value = ""
             _currentDate.value = getCurrentDateFormatted()
-            
-            delay(4500)
-            _showEntryConfirmation.value = false
+
+            confirmationJob = launch {
+                delay(4500)
+                _showEntryConfirmation.value = false
+            }
         }
     }
 
@@ -284,10 +294,16 @@ fun formatInvoice(number: String, format: InvoiceFormat): String {
     val calendar = Calendar.getInstance()
     val year = calendar.get(Calendar.YEAR)
     val month = calendar.get(Calendar.MONTH) + 1
-    
+
     return when (format) {
         InvoiceFormat.NUMBER -> number
         InvoiceFormat.YEAR_NUMBER -> "$year-$number"
-        InvoiceFormat.YEAR_MONTH_NUMBER -> String.format(Locale.GERMANY, "%d-%02d-%s", year, month, number)
+        InvoiceFormat.YEAR_MONTH_NUMBER -> String.format(
+            Locale.GERMANY,
+            "%d-%02d-%s",
+            year,
+            month,
+            number
+        )
     }
 }

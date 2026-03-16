@@ -12,6 +12,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -37,11 +38,11 @@ import androidx.compose.ui.unit.sp
 import com.juliandobrodolac.honorarcraftandroid.ui.theme.HonorarCraftAndroidTheme
 
 @Composable
-fun SplashScreen() {
+fun GearSplashScreen() {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White),
+            .background(MaterialTheme.colorScheme.background),
         contentAlignment = Alignment.Center
     ) {
         GearAnimation()
@@ -52,7 +53,9 @@ fun SplashScreen() {
 fun GearAnimation() {
     val infiniteTransition = rememberInfiniteTransition(label = "gearRotation")
     val textMeasurer = rememberTextMeasurer()
-    
+    val onBackgroundColor = MaterialTheme.colorScheme.onBackground
+    val backgroundColor = MaterialTheme.colorScheme.background
+
     // Rotation des äußeren Zahnrads
     val rotationOuter by infiniteTransition.animateFloat(
         initialValue = 0f,
@@ -99,9 +102,9 @@ fun GearAnimation() {
 
     Canvas(modifier = Modifier.size(900.dp)) {
         val center = Offset(size.width / 2, size.height / 2)
-        
+
         scale(pulseScale, center) {
-            // Äußeres Zahnrad (Linke Seite schwarz, rechte Seite weiß)
+            // Äußeres Zahnrad
             clipRect(right = center.x) {
                 rotate(rotationOuter, center) {
                     drawGear(
@@ -112,7 +115,7 @@ fun GearAnimation() {
                         toothWidth = 99f,
                         toothHeight = 126f,
                         cornerRadius = 21f,
-                        color = Color.Black
+                        color = onBackgroundColor
                     )
                 }
             }
@@ -126,15 +129,15 @@ fun GearAnimation() {
                         toothWidth = 99f,
                         toothHeight = 126f,
                         cornerRadius = 21f,
-                        color = Color.White
+                        color = backgroundColor
                     )
                 }
             }
 
-            // Inneres Zahnrad (Linke Seite weiß, rechte Seite schwarz)
+            // Inneres Zahnrad
             val innerGearRadius = 160f
             val innerGearInnerRadius = 110f
-            
+
             clipRect(right = center.x) {
                 rotate(rotationInner, center) {
                     drawGear(
@@ -145,7 +148,7 @@ fun GearAnimation() {
                         toothWidth = 45f,
                         toothHeight = 57f,
                         cornerRadius = 9f,
-                        color = Color.White
+                        color = backgroundColor
                     )
                 }
             }
@@ -159,30 +162,30 @@ fun GearAnimation() {
                         toothWidth = 45f,
                         toothHeight = 57f,
                         cornerRadius = 9f,
-                        color = Color.Black
+                        color = onBackgroundColor
                     )
                 }
             }
         }
 
-        // "HC" Text in der Mitte mit Schatten für mehr Tiefe
+        // "HC" Text in der Mitte
         val textStyle = TextStyle(
-            color = Color.Black.copy(alpha = alpha),
+            color = onBackgroundColor.copy(alpha = alpha),
             fontSize = 40.sp,
             fontWeight = FontWeight.Black,
             fontFamily = FontFamily.Serif,
             shadow = Shadow(
-                color = Color.Black.copy(alpha = 0.3f),
+                color = onBackgroundColor.copy(alpha = 0.3f),
                 offset = Offset(4f, 4f),
                 blurRadius = 8f
             )
         )
-        
+
         val textLayoutResult = textMeasurer.measure(
             text = "HC",
             style = textStyle
         )
-        
+
         drawText(
             textLayoutResult = textLayoutResult,
             topLeft = Offset(
@@ -203,7 +206,6 @@ private fun DrawScope.drawGear(
     cornerRadius: Float,
     color: Color
 ) {
-    // Der Ring des Zahnrads
     drawCircle(
         color = color,
         radius = (radius + innerRadius) / 2,
@@ -211,7 +213,6 @@ private fun DrawScope.drawGear(
         style = Stroke(width = radius - innerRadius)
     )
 
-    // Die Zähne
     val angleStep = 360f / toothCount
     for (i in 0 until toothCount) {
         rotate(angleStep * i, center) {
@@ -227,8 +228,8 @@ private fun DrawScope.drawGear(
 
 @Preview(showBackground = true)
 @Composable
-fun SplashScreenPreview() {
+fun GearSplashScreenPreview() {
     HonorarCraftAndroidTheme {
-        SplashScreen()
+        GearSplashScreen()
     }
 }

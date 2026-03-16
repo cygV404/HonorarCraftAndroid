@@ -58,7 +58,7 @@ fun DashboardScreen(
     val rawInvoiceNumber by mainViewModel.selectedInvoiceNumber.collectAsState()
     val formattedInvoiceNumber by mainViewModel.formattedInvoiceNumber.collectAsState()
     val invoiceFormat by mainViewModel.invoiceFormat.collectAsState()
-    
+
     DashboardContent(
         totalSum = yearlyRevenueState,
         selectedYear = selectedYear,
@@ -198,15 +198,23 @@ fun DashboardControlCard(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             IconButton(onClick = onDecrement) {
-                Icon(decrementIcon, contentDescription = "Verringern", tint = MaterialTheme.colorScheme.primary)
+                Icon(
+                    decrementIcon,
+                    contentDescription = "Verringern",
+                    tint = MaterialTheme.colorScheme.primary
+                )
             }
 
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.weight(1f)
             ) {
-                Text(text = title, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.secondary)
-                
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.secondary
+                )
+
                 AnimatedContent(
                     targetState = value,
                     transitionSpec = {
@@ -215,12 +223,21 @@ fun DashboardControlCard(
                     },
                     label = "valueAnimation"
                 ) { targetValue ->
-                    Text(text = targetValue, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        text = targetValue,
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
             }
 
             IconButton(onClick = onIncrement) {
-                Icon(incrementIcon, contentDescription = "Erhöhen", tint = MaterialTheme.colorScheme.primary)
+                Icon(
+                    incrementIcon,
+                    contentDescription = "Erhöhen",
+                    tint = MaterialTheme.colorScheme.primary
+                )
             }
         }
     }

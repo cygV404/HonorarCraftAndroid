@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="400"
+    android:viewportHeight="400">
+
+    <!-- Zahnrad-Zähne -->
+    <group
+        android:pivotX="200"
+        android:pivotY="200">
+
+        <!-- Wir verwenden Gruppen für die Rotation, da Pfade selbst kein 'rotation' Attribut haben -->
+        <group
+            android:rotation="0"
+            android:pivotX="200"
+            android:pivotY="200">
+            <path
+                android:fillColor="#FF000000"
+                android:pathData="M 177.5,21 L 222.5,21 A 9,9 0 0,1 231.5,30 L 231.5,69 A 9,9 0 0,1 222.5,78 L 177.5,78 A 9,9 0 0,1 168.5,69 L 168.5,30 A 9,9 0 0,1 177.5,21 Z" />
+        </group>
+        <group
+            android:rotation="30"
+            android:pivotX="200"
+            android:pivotY="200">
+            <path
+                android:fillColor="#FF000000"
+                android:pathData="M 177.5,21 L 222.5,21 A 9,9 0 0,1 231.5,30 L 231.5,69 A 9,9 0 0,1 222.5,78 L 177.5,78 A 9,9 0 0,1 168.5,69 L 168.5,30 A 9,9 0 0,1 177.5,21 Z" />
+        </group>
+        <group
+            android:rotation="60"
+            android:pivotX="200"
+            android:pivotY="200">
+            <path
+                android:fillColor="#FF000000"
+                android:pathData="M 177.5,21 L 222.5,21 A 9,9 0 0,1 231.5,30 L 231.5,69 A 9,9 0 0,1 222.5,78 L 177.5,78 A 9,9 0 0,1 168.5,69 L 168.5,30 A 9,9 0 0,1 177.5,21 Z" />
+        </group>
+        <group
+            android:rotation="90"
+            android:pivotX="200"
+            android:pivotY="200">
+            <path
+                android:fillColor="#FF000000"
+                android:pathData="M 177.5,21 L 222.5,21 A 9,9 0 0,1 231.5,30 L 231.5,69 A 9,9 0 0,1 222.5,78 L 177.5,78 A 9,9 0 0,1 168.5,69 L 168.5,30 A 9,9 0 0,1 177.5,21 Z" />
+        </group>
+        <group
+            android:rotation="120"
+            android:pivotX="200"
+            android:pivotY="200">
+            <path
+                android:fillColor="#FF000000"
+                android:pathData="M 177.5,21 L 222.5,21 A 9,9 0 0,1 231.5,30 L 231.5,69 A 9,9 0 0,1 222.5,78 L 177.5,78 A 9,9 0 0,1 168.5,69 L 168.5,30 A 9,9 0 0,1 177.5,21 Z" />
+        </group>
+        <group
+            android:rotation="150"
+            android:pivotX="200"
+            android:pivotY="200">
+            <path
+                android:fillColor="#FF000000"
+                android:pathData="M 177.5,21 L 222.5,21 A 9,9 0 0,1 231.5,30 L 231.5,69 A 9,9 0 0,1 222.5,78 L 177.5,78 A 9,9 0 0,1 168.5,69 L 168.5,30 A 9,9 0 0,1 177.5,21 Z" />
+        </group>
+        <group
+            android:rotation="180"
+            android:pivotX="200"
+            android:pivotY="200">
+            <path
+                android:fillColor="#FF000000"
+                android:pathData="M 177.5,21 L 222.5,21 A 9,9 0 0,1 231.5,30 L 231.5,69 A 9,9 0 0,1 222.5,78 L 177.5,78 A 9,9 0 0,1 168.5,69 L 168.5,30 A 9,9 0 0,1 177.5,21 Z" />
+        </group>
+        <group
+            android:rotation="210"
+            android:pivotX="200"
+            android:pivotY="200">
+            <path
+                android:fillColor="#FF000000"
+                android:pathData="M 177.5,21 L 222.5,21 A 9,9 0 0,1 231.5,30 L 231.5,69 A 9,9 0 0,1 222.5,78 L 177.5,78 A 9,9 0 0,1 168.5,69 L 168.5,30 A 9,9 0 0,1 177.5,21 Z" />
+        </group>
+        <group
+            android:rotation="240"
+            android:pivotX="200"
+            android:pivotY="200">
+            <path
+                android:fillColor="#FF000000"
+                android:pathData="M 177.5,21 L 222.5,21 A 9,9 0 0,1 231.5,30 L 231.5,69 A 9,9 0 0,1 222.5,78 L 177.5,78 A 9,9 0 0,1 168.5,69 L 168.5,30 A 9,9 0 0,1 177.5,21 Z" />
+        </group>
+        <group
+            android:rotation="270"
+            android:pivotX="200"
+            android:pivotY="200">
+            <path
+                android:fillColor="#FF000000"
+                android:pathData="M 177.5,21 L 222.5,21 A 9,9 0 0,1 231.5,30 L 231.5,69 A 9,9 0 0,1 222.5,78 L 177.5,78 A 9,9 0 0,1 168.5,69 L 168.5,30 A 9,9 0 0,1 177.5,21 Z" />
+        </group>
+        <group
+            android:rotation="300"
+            android:pivotX="200"
+            android:pivotY="200">
+            <path
+                android:fillColor="#FF000000"
+                android:pathData="M 177.5,21 L 222.5,21 A 9,9 0 0,1 231.5,30 L 231.5,69 A 9,9 0 0,1 222.5,78 L 177.5,78 A 9,9 0 0,1 168.5,69 L 168.5,30 A 9,9 0 0,1 177.5,21 Z" />
+        </group>
+        <group
+            android:rotation="330"
+            android:pivotX="200"
+            android:pivotY="200">
+            <path
+                android:fillColor="#FF000000"
+                android:pathData="M 177.5,21 L 222.5,21 A 9,9 0 0,1 231.5,30 L 231.5,69 A 9,9 0 0,1 222.5,78 L 177.5,78 A 9,9 0 0,1 168.5,69 L 168.5,30 A 9,9 0 0,1 177.5,21 Z" />
+        </group>
+    </group>
+
+    <!-- Zentraler Ring -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FF000000"
+        android:strokeWidth="50"
+        android:pathData="M 200,65 A 135,135 0 1,1 199.99,65" />
+
+</vector>

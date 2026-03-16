@@ -38,17 +38,19 @@ android {
 
 dependencies {
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose)
-    
+
     // Explicitly using a newer BOM for better alpha support
     implementation(platform("androidx.compose:compose-bom:2025.02.00"))
-    
+
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
+    implementation(libs.androidx.compose.ui.text.google.fonts)
 
     implementation(libs.androidx.compose.material.icons.extended)
 

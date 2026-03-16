@@ -115,12 +115,12 @@ fun EntryWindowContent(
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var isDescending by remember { mutableStateOf(true) }
-    
+
     // Multi-selection state
     var selectedIds by remember { mutableStateOf(setOf<Long>()) }
     val isSelectionMode = selectedIds.isNotEmpty()
     var showDeleteDialog by remember { mutableStateOf(false) }
-    
+
     val context = LocalContext.current
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -146,25 +146,41 @@ fun EntryWindowContent(
             )
         } else {
             TopAppBar(
-                title = { Text("Rechnung $displayInvoiceNumber", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                title = {
+                    Text(
+                        "Rechnung $displayInvoiceNumber",
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                },
                 actions = {
                     Box {
                         IconButton(onClick = { showMenu = true }) {
-                            Icon(Icons.Default.FormatListNumbered, contentDescription = "Optionen", modifier = Modifier.size(32.dp))
+                            Icon(
+                                Icons.Default.FormatListNumbered,
+                                contentDescription = "Optionen",
+                                modifier = Modifier.size(32.dp)
+                            )
                         }
                         DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                             allInvoiceNumbers.forEach { num ->
                                 val calendar = Calendar.getInstance()
                                 val year = calendar.get(Calendar.YEAR)
                                 val month = calendar.get(Calendar.MONTH) + 1
-                                val formattedNum = when(invoiceFormat) {
+                                val formattedNum = when (invoiceFormat) {
                                     InvoiceFormat.NUMBER -> num
                                     InvoiceFormat.YEAR_NUMBER -> "$year-$num"
-                                    InvoiceFormat.YEAR_MONTH_NUMBER -> String.format(Locale.GERMANY, "%d-%02d-%s", year, month, num)
+                                    InvoiceFormat.YEAR_MONTH_NUMBER -> String.format(
+                                        Locale.GERMANY,
+                                        "%d-%02d-%s",
+                                        year,
+                                        month,
+                                        num
+                                    )
                                 }
                                 DropdownMenuItem(
                                     text = { Text("Rechnung $formattedNum") },
-                                    onClick = { 
+                                    onClick = {
                                         showMenu = false
                                         onInvoiceSelect(num)
                                     }
@@ -179,7 +195,7 @@ fun EntryWindowContent(
                                         contentDescription = null
                                     )
                                 },
-                                onClick = { 
+                                onClick = {
                                     isDescending = !isDescending
                                     showMenu = false
                                 }
@@ -203,8 +219,10 @@ fun EntryWindowContent(
             ) {
                 Spacer(modifier = Modifier.height(24.dp))
 
-                val totalUe = String.format(Locale.GERMAN, "%.2f", invoiceWithEntries?.totalLessonUnit ?: 0.0)
-                val totalSum = String.format(Locale.GERMAN, "%.2f €", invoiceWithEntries?.totalSum ?: 0.0)
+                val totalUe =
+                    String.format(Locale.GERMAN, "%.2f", invoiceWithEntries?.totalLessonUnit ?: 0.0)
+                val totalSum =
+                    String.format(Locale.GERMAN, "%.2f €", invoiceWithEntries?.totalSum ?: 0.0)
 
                 SummaryCard(totalUe = totalUe, totalSum = totalSum)
 
@@ -217,13 +235,21 @@ fun EntryWindowContent(
                     if (isDescending) {
                         entries.sortedWith(
                             compareByDescending<InvoiceEntry> {
-                                try { dateFormat.parse(it.date) } catch (e: Exception) { null }
+                                try {
+                                    dateFormat.parse(it.date)
+                                } catch (e: Exception) {
+                                    null
+                                }
                             }.thenByDescending { it.id }
                         )
                     } else {
                         entries.sortedWith(
                             compareBy<InvoiceEntry> {
-                                try { dateFormat.parse(it.date) } catch (e: Exception) { null }
+                                try {
+                                    dateFormat.parse(it.date)
+                                } catch (e: Exception) {
+                                    null
+                                }
                             }.thenBy { it.id }
                         )
                     }
@@ -241,7 +267,7 @@ fun EntryWindowContent(
                         val rate = invoiceWithEntries?.invoice?.rate ?: 0.0
                         val ueValue = (entry.lessonUnits * 60) / 45
                         val entrySum = ueValue * rate
-                        
+
                         EntryCard(
                             entry = InvoiceEntryData(
                                 date = entry.date,
@@ -272,21 +298,24 @@ fun EntryWindowContent(
 
             if (!isSelectionMode) {
                 FloatingActionButton(
-                    onClick = { 
+                    onClick = {
                         if (companyData != null && invoiceWithEntries != null) {
                             onGeneratePdf(context, companyData, invoiceWithEntries)
                         } else {
-                            Toast.makeText(context, "Daten unvollständig", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Daten unvollständig", Toast.LENGTH_SHORT)
+                                .show()
                         }
                     },
-                    modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(16.dp),
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary
                 ) {
                     Icon(Icons.Filled.PictureAsPdf, contentDescription = "PDF generieren")
                 }
             }
-            
+
             if (isLoading) {
                 Box(
                     modifier = Modifier
@@ -312,7 +341,9 @@ fun EntryWindowContent(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        val entriesToDelete = invoiceWithEntries?.entries?.filter { it.id in selectedIds } ?: emptyList()
+                        val entriesToDelete =
+                            invoiceWithEntries?.entries?.filter { it.id in selectedIds }
+                                ?: emptyList()
                         onDeleteEntries(entriesToDelete)
                         selectedIds = emptySet()
                         showDeleteDialog = false
@@ -330,21 +361,41 @@ fun EntryWindowContent(
     }
 }
 
-data class InvoiceEntryData(val date: String, val ue: String, val subject: String, val total: String)
+data class InvoiceEntryData(
+    val date: String,
+    val ue: String,
+    val subject: String,
+    val total: String
+)
 
 @Composable
 fun SummaryCard(totalUe: String, totalSum: String) {
     ElevatedCard(
-        modifier = Modifier.fillMaxWidth().height(80.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(80.dp),
         colors = CardDefaults.elevatedCardColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer,
             contentColor = MaterialTheme.colorScheme.onPrimaryContainer
         )
     ) {
-        Row(modifier = Modifier.fillMaxSize().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Column {
-                Text(text = "Summe gesamt: $totalSum", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Text(text = "UE gesamt: $totalUe", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(
+                    text = "Summe gesamt: $totalSum",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "UE gesamt: $totalUe",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }
@@ -368,35 +419,37 @@ fun EntryCard(
                 onLongClick = onLongClick
             ),
         colors = CardDefaults.elevatedCardColors(
-            containerColor = if (isSelected) MaterialTheme.colorScheme.tertiaryContainer 
-                            else MaterialTheme.colorScheme.surfaceContainerLow,
-            contentColor = if (isSelected) MaterialTheme.colorScheme.onTertiaryContainer 
-                           else MaterialTheme.colorScheme.onSurface
+            containerColor = if (isSelected) MaterialTheme.colorScheme.tertiaryContainer
+            else MaterialTheme.colorScheme.surfaceContainerLow,
+            contentColor = if (isSelected) MaterialTheme.colorScheme.onTertiaryContainer
+            else MaterialTheme.colorScheme.onSurface
         ),
     ) {
         Row(
-            modifier = Modifier.fillMaxSize().padding(16.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = entry.date, 
-                    style = MaterialTheme.typography.labelMedium, 
+                    text = entry.date,
+                    style = MaterialTheme.typography.labelMedium,
                     color = if (isSelected) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
                 )
                 Text(
-                    text = "${entry.ue} - ${entry.subject}", 
-                    style = MaterialTheme.typography.bodyLarge, 
-                    fontWeight = FontWeight.Medium, 
-                    maxLines = 1, 
+                    text = "${entry.ue} - ${entry.subject}",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
             Text(
-                text = entry.total, 
-                style = MaterialTheme.typography.titleMedium, 
-                fontWeight = FontWeight.Bold, 
+                text = entry.total,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
                 color = if (isSelected) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.secondary
             )
         }
@@ -409,7 +462,7 @@ fun EntryWindowPreview() {
     HonorarCraftAndroidTheme {
         EntryWindowContent(
             displayInvoiceNumber = "1",
-            allInvoiceNumbers = listOf("1","2"),
+            allInvoiceNumbers = listOf("1", "2"),
             invoiceFormat = InvoiceFormat.NUMBER,
             invoiceWithEntries = null,
             companyData = null,
