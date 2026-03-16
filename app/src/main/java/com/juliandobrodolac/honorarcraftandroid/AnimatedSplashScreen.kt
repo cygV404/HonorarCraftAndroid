@@ -43,7 +43,7 @@ fun AnimatedSplashScreen4() {
         transitionSpec = {
             keyframes {
                 durationMillis = 3000
-                -100f at 0 with LinearOutSlowInEasing
+                -100f at 0 using LinearOutSlowInEasing
                 0f at 1000
                 0f at 3000
             }
@@ -56,7 +56,7 @@ fun AnimatedSplashScreen4() {
         transitionSpec = {
             keyframes {
                 durationMillis = 3000
-                0f at 1500 with LinearOutSlowInEasing
+                0f at 1500 using LinearOutSlowInEasing
                 50f at 3000
             }
         },
@@ -68,9 +68,9 @@ fun AnimatedSplashScreen4() {
         transitionSpec = {
             keyframes {
                 durationMillis = 3000
-                0f at 0 with LinearOutSlowInEasing
+                0f at 0 using LinearOutSlowInEasing
                 270f at 1000
-                270f at 1500 with LinearOutSlowInEasing
+                270f at 1500 using LinearOutSlowInEasing
                 720f at 3000
             }
         },
@@ -82,7 +82,7 @@ fun AnimatedSplashScreen4() {
         transitionSpec = {
             keyframes {
                 durationMillis = 3000
-                270f at 1500 with LinearOutSlowInEasing
+                270f at 1500 using LinearOutSlowInEasing
                 720f at 3000
             }
         },

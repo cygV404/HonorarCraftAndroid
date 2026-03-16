@@ -36,7 +36,7 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.juliandobrodolac.honorarcraftandroid.ui.theme.HonorarCraftAndroidTheme
 import kotlinx.coroutines.delay
-
+// todos -export schema aktivieren -datenbak abfragen optimieren
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         // 1. Offizielle Splash Screen API initialisieren

@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.math.BigDecimal
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -93,12 +94,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var confirmationJob: Job? = null
 
     // Yearly Revenue - reactive to _selectedYear
-    val yearlyRevenue: StateFlow<Double> = _selectedYear
+    val yearlyRevenue: StateFlow<BigDecimal> = _selectedYear
         .flatMapLatest { year ->
-            invoiceDao.getRevenueForYear(year.toString())
+            invoiceDao.getAllInvoicesWithEntries()
         }
-        .map { it ?: 0.0 }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+        .map { invoices ->
+            invoices.fold(BigDecimal.ZERO) { acc, invoiceWithEntries ->
+                // Filter entries by year
+                val entriesForYear = invoiceWithEntries.entries.filter { it.date.endsWith(_selectedYear.value.toString()) }
+                // Calculate sum for these entries
+                val sumForYear = entriesForYear.fold(BigDecimal.ZERO) { entryAcc, entry ->
+                    val ue = entry.lessonUnits.multiply(BigDecimal("60"))
+                        .divide(BigDecimal("45"), 10, java.math.RoundingMode.HALF_UP)
+                    entryAcc.add(ue.multiply(invoiceWithEntries.invoice.rate))
+                }
+                acc.add(sumForYear)
+            }.setScale(2, java.math.RoundingMode.HALF_UP)
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), BigDecimal.ZERO)
 
     // Company Data
     val companyData: StateFlow<CompanyData?> = companyDao.getCompanyData()
@@ -205,13 +218,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (datum.isBlank() || stunden.isBlank()) return
 
         val number = _selectedInvoiceNumber.value
-        val hours = stunden.toDoubleOrNull() ?: 0.0
+        val hours = stunden.replace(",", ".").toBigDecimalOrNull() ?: BigDecimal.ZERO
 
         viewModelScope.launch {
             val existingInvoice = invoiceDao.getInvoice(number)
 
             if (existingInvoice == null) {
-                val rate = companyData.value?.rate?.toDoubleOrNull() ?: 23.0
+                val rateStr = companyData.value?.rate ?: "23.0"
+                val rate = rateStr.replace(",", ".").toBigDecimalOrNull() ?: BigDecimal("23.0")
                 invoiceDao.insertInvoice(InvoiceData(invoiceNumber = number, rate = rate))
             }
 
@@ -241,13 +255,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun addEntry(datum: String, stunden: String, klasseFach: String) {
         val number = _selectedInvoiceNumber.value
-        val hours = stunden.toDoubleOrNull() ?: 0.0
+        val hours = stunden.replace(",", ".").toBigDecimalOrNull() ?: BigDecimal.ZERO
 
         viewModelScope.launch {
             val existingInvoice = invoiceDao.getInvoice(number)
 
             if (existingInvoice == null) {
-                val rate = companyData.value?.rate?.toDoubleOrNull() ?: 23.0
+                val rateStr = companyData.value?.rate ?: "23.0"
+                val rate = rateStr.replace(",", ".").toBigDecimalOrNull() ?: BigDecimal("23.0")
                 invoiceDao.insertInvoice(InvoiceData(invoiceNumber = number, rate = rate))
             }
 

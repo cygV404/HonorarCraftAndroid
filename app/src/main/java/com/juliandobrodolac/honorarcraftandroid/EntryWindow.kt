@@ -58,6 +58,8 @@ import androidx.lifecycle.viewModelScope
 import com.juliandobrodolac.honorarcraftandroid.ui.theme.HonorarCraftAndroidTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.math.BigDecimal
+import java.math.RoundingMode
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -220,9 +222,9 @@ fun EntryWindowContent(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 val totalUe =
-                    String.format(Locale.GERMAN, "%.2f", invoiceWithEntries?.totalLessonUnit ?: 0.0)
+                    String.format(Locale.GERMAN, "%,.2f", invoiceWithEntries?.totalLessonUnit ?: BigDecimal.ZERO)
                 val totalSum =
-                    String.format(Locale.GERMAN, "%.2f €", invoiceWithEntries?.totalSum ?: 0.0)
+                    String.format(Locale.GERMAN, "%,.2f €", invoiceWithEntries?.totalSum ?: BigDecimal.ZERO)
 
                 SummaryCard(totalUe = totalUe, totalSum = totalSum)
 
@@ -264,16 +266,17 @@ fun EntryWindowContent(
                         items = sortedEntries,
                         key = { it.id }
                     ) { entry ->
-                        val rate = invoiceWithEntries?.invoice?.rate ?: 0.0
-                        val ueValue = (entry.lessonUnits * 60) / 45
-                        val entrySum = ueValue * rate
+                        val rate = invoiceWithEntries?.invoice?.rate ?: BigDecimal.ZERO
+                        val ueValue = entry.lessonUnits.multiply(BigDecimal("60"))
+                            .divide(BigDecimal("45"), 10, RoundingMode.HALF_UP)
+                        val entrySum = ueValue.multiply(rate).setScale(2, RoundingMode.HALF_UP)
 
                         EntryCard(
                             entry = InvoiceEntryData(
                                 date = entry.date,
-                                ue = String.format(Locale.GERMAN, "%.2f UE", ueValue),
+                                ue = String.format(Locale.GERMAN, "%,.2f UE", ueValue),
                                 subject = entry.teachingSubject,
-                                total = String.format(Locale.GERMAN, "%.2f €", entrySum)
+                                total = String.format(Locale.GERMAN, "%,.2f €", entrySum)
                             ),
                             isSelected = selectedIds.contains(entry.id),
                             onClick = {

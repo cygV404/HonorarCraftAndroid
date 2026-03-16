@@ -61,6 +61,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.juliandobrodolac.honorarcraftandroid.ui.theme.HonorarCraftAndroidTheme
+import java.math.BigDecimal
+import java.math.RoundingMode
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -337,7 +339,7 @@ fun CreateInvoiceContent(
             }
 
             // Floating Confirmation Card overlaying the top (using the top-level AnimatedVisibility)
-            AnimatedVisibility(
+            androidx.compose.animation.AnimatedVisibility(
                 visible = showConfirmation && lastAddedEntry != null,
                 enter = fadeIn() + expandVertically(),
                 exit = fadeOut() + shrinkVertically(),
@@ -348,12 +350,14 @@ fun CreateInvoiceContent(
                     .padding(horizontal = 16.dp)
             ) {
                 lastAddedEntry?.let { entry ->
-                    val rate = companyData?.rate?.toDoubleOrNull() ?: 23.0
-                    val ueValue = (entry.lessonUnits * 60) / 45
-                    val entrySum = ueValue * rate
+                    val rateStr = companyData?.rate ?: "23.0"
+                    val rate = rateStr.replace(",", ".").toBigDecimalOrNull() ?: BigDecimal("23.0")
+                    val ueValue = entry.lessonUnits.multiply(BigDecimal("60"))
+                        .divide(BigDecimal("45"), 10, RoundingMode.HALF_UP)
+                    val entrySum = ueValue.multiply(rate).setScale(2, RoundingMode.HALF_UP)
 
-                    val formattedUe = String.format(Locale.GERMAN, "%.2f UE", ueValue)
-                    val formattedTotal = String.format(Locale.GERMAN, "%.2f €", entrySum)
+                    val formattedUe = String.format(Locale.GERMAN, "%,.2f UE", ueValue)
+                    val formattedTotal = String.format(Locale.GERMAN, "%,.2f €", entrySum)
 
                     ElevatedCard(
                         modifier = Modifier

@@ -4,6 +4,8 @@ import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import androidx.room.Relation
+import java.math.BigDecimal
+import java.math.RoundingMode
 
 /**
  * Represents the main invoice data stored in the 'invoices' table.
@@ -11,7 +13,7 @@ import androidx.room.Relation
 @Entity(tableName = "invoices")
 data class InvoiceData(
     @PrimaryKey val invoiceNumber: String,
-    val rate: Double // Stored as Double for Room compatibility
+    val rate: BigDecimal
 )
 
 /**
@@ -26,21 +28,24 @@ data class InvoiceWithEntries(
     )
     val entries: List<InvoiceEntry>
 ) {
-    // --- Business Logic from the original class, adapted for Double ---
+    // --- Business Logic from the original class, adapted for BigDecimal ---
 
-    private fun calculateCorrectedHours(units: Double): Double {
-        return (units * 60) / 45
+    private fun calculateCorrectedHours(units: BigDecimal): BigDecimal {
+        return units.multiply(BigDecimal("60"))
+            .divide(BigDecimal("45"), 10, RoundingMode.HALF_UP)
     }
 
 
-    val totalSum: Double
-        get() = entries.sumOf { entry ->
+    val totalSum: BigDecimal
+        get() = entries.fold(BigDecimal.ZERO) { acc, entry ->
             val ue = calculateCorrectedHours(entry.lessonUnits)
-            ue * invoice.rate
-        }
+            acc.add(ue.multiply(invoice.rate))
+        }.setScale(2, RoundingMode.HALF_UP)
 
 
-    val totalLessonUnit: Double
-        get() = entries.sumOf { calculateCorrectedHours(it.lessonUnits) }
+    val totalLessonUnit: BigDecimal
+        get() = entries.fold(BigDecimal.ZERO) { acc, entry ->
+            acc.add(calculateCorrectedHours(entry.lessonUnits))
+        }.setScale(2, RoundingMode.HALF_UP)
 
 }

@@ -10,7 +10,9 @@ import androidx.room.Query
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.Transaction
+import androidx.room.TypeConverters
 import kotlinx.coroutines.flow.Flow
+import java.math.BigDecimal
 
 @Dao
 interface InvoiceDao {
@@ -42,15 +44,9 @@ interface InvoiceDao {
     @Query("SELECT invoiceNumber FROM invoices")
     fun getAllInvoiceNumbers(): Flow<List<String>>
 
-    @Query(
-        """
-        SELECT SUM((e.lessonUnits * 60.0 / 45.0) * i.rate) 
-        FROM invoice_entries e 
-        JOIN invoices i ON e.invoiceNumber = i.invoiceNumber 
-        WHERE e.date LIKE '%' || :year
-    """
-    )
-    fun getRevenueForYear(year: String): Flow<Double?>
+    @Transaction
+    @Query("SELECT * FROM invoices")
+    fun getAllInvoicesWithEntries(): Flow<List<InvoiceWithEntries>>
 }
 
 @Dao
@@ -62,7 +58,8 @@ interface CompanyDao {
     fun getCompanyData(): Flow<CompanyData?>
 }
 
-@Database(entities = [InvoiceData::class, InvoiceEntry::class, CompanyData::class], version = 1)
+@Database(entities = [InvoiceData::class, InvoiceEntry::class, CompanyData::class], version = 3)
+@TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun invoiceDao(): InvoiceDao
     abstract fun companyDao(): CompanyDao
@@ -78,7 +75,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "honorarcraft_database"
                 )
-                    .fallbackToDestructiveMigration()
+                    .fallbackToDestructiveMigration(dropAllTables = true)
                     .build()
                 INSTANCE = instance
                 instance

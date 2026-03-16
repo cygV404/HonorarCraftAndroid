@@ -13,6 +13,8 @@ import android.provider.MediaStore
 import android.widget.Toast
 import java.io.File
 import java.io.FileOutputStream
+import java.math.BigDecimal
+import java.math.RoundingMode
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -165,9 +167,9 @@ fun createPdf(
         )
         y += 30f
 
-        val totalUe = String.format(Locale.GERMAN, "%.2f", invoiceWithEntries.totalLessonUnit)
-        val totalSum = String.format(Locale.GERMAN, "%.2f €", invoiceWithEntries.totalSum)
-        val rate = String.format(Locale.GERMAN, "%.2f", invoiceWithEntries.invoice.rate)
+        val totalUe = String.format(Locale.GERMAN, "%,.2f", invoiceWithEntries.totalLessonUnit)
+        val totalSum = String.format(Locale.GERMAN, "%,.2f €", invoiceWithEntries.totalSum)
+        val rate = String.format(Locale.GERMAN, "%,.2f", invoiceWithEntries.invoice.rate)
 
         canvas1.drawText(
             "UE Gesamt a 45 Min = $totalUe  x   $rate € Honorar/UE",
@@ -248,18 +250,19 @@ fun createPdf(
                 )
             }
 
-            val ue = (entry.lessonUnits * 60) / 45
-            val cost = ue * invoiceWithEntries.invoice.rate
+            val ue = entry.lessonUnits.multiply(BigDecimal("60"))
+                .divide(BigDecimal("45"), 10, RoundingMode.HALF_UP)
+            val cost = ue.multiply(invoiceWithEntries.invoice.rate).setScale(2, RoundingMode.HALF_UP)
 
             tableCanvas.drawText(entry.date, leftMargin, currentY, textPaint)
             tableCanvas.drawText(
-                String.format(Locale.GERMAN, "%.2f", ue),
+                String.format(Locale.GERMAN, "%,.2f", ue),
                 leftMargin + 60f,
                 currentY,
                 textPaint
             )
             tableCanvas.drawText(
-                String.format(Locale.GERMAN, "%.2f €", cost),
+                String.format(Locale.GERMAN, "%,.2f €", cost),
                 leftMargin + 110f,
                 currentY,
                 textPaint
@@ -283,7 +286,7 @@ fun createPdf(
             "UE Gesamt a 45 Min = ${
                 String.format(
                     Locale.GERMAN,
-                    "%.2f",
+                    "%,.2f",
                     invoiceWithEntries.totalLessonUnit
                 )
             }", leftMargin, currentY, boldPaint
@@ -293,7 +296,7 @@ fun createPdf(
             "Summe = ${
                 String.format(
                     Locale.GERMAN,
-                    "%.2f €",
+                    "%,.2f €",
                     invoiceWithEntries.totalSum
                 )
             }", leftMargin, currentY, boldPaint

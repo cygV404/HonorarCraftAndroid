@@ -47,6 +47,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.juliandobrodolac.honorarcraftandroid.ui.theme.HonorarCraftAndroidTheme
+import java.math.BigDecimal
 import java.util.Locale
 
 @Composable
@@ -74,7 +75,7 @@ fun DashboardScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardContent(
-    totalSum: Double,
+    totalSum: BigDecimal,
     selectedYear: Int,
     rawInvoiceNumber: String,
     displayInvoiceNumber: String,
@@ -83,7 +84,7 @@ fun DashboardContent(
     onInvoiceNumberChange: (String) -> Unit,
     onFormatChange: (InvoiceFormat) -> Unit
 ) {
-    val yearlyRevenueFormatted = String.format(Locale.GERMAN, "%.2f", totalSum)
+    val yearlyRevenueFormatted = String.format(Locale.GERMAN, "%,.2f", totalSum)
     val invoiceNumberInt = rawInvoiceNumber.toIntOrNull() ?: 1
     var showMenu by remember { mutableStateOf(false) }
 
@@ -248,7 +249,7 @@ fun DashboardControlCard(
 fun DashboardPreview() {
     HonorarCraftAndroidTheme {
         DashboardContent(
-            totalSum = 12500.0,
+            totalSum = BigDecimal("12500.00"),
             selectedYear = 2026,
             rawInvoiceNumber = "1",
             displayInvoiceNumber = "1",
