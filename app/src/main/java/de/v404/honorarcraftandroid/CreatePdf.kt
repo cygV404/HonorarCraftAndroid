@@ -1,17 +1,22 @@
 package de.v404.honorarcraftandroid
 
+import android.content.ContentValues
 import android.content.Context
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
+import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
 import android.widget.Toast
 import java.io.File
-import java.io.FileOutputStream
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -19,7 +24,7 @@ fun createInvoicePdf(
     context: Context,
     invoiceWithEntries: InvoiceWithEntries,
     companyData: CompanyData?,
-    onFinished: (File) -> Unit
+    onFinished: (File?) -> Unit
 ) {
     if (companyData == null) {
         Toast.makeText(context, "Unternehmensdaten fehlen!", Toast.LENGTH_SHORT).show()
@@ -27,107 +32,249 @@ fun createInvoicePdf(
     }
 
     val pdfDocument = PdfDocument()
-    val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create()
-    val page = pdfDocument.startPage(pageInfo)
-    val canvas: Canvas = page.canvas
-    val paint = Paint()
-    val titlePaint = Paint()
-
+    val pageWidth = 595
+    val pageHeight = 842
     val margin = 50f
-    var yPos = 80f
+    val contentWidth = pageWidth - 2 * margin
 
-    // Biller Info (Top Right)
-    paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-    paint.textSize = 10f
+    val paint = Paint().apply {
+        textSize = 11f
+        isAntiAlias = true
+    }
+    val paintBold = Paint().apply {
+        textSize = 11f
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        isAntiAlias = true
+    }
+    val titlePaint = Paint().apply {
+        textSize = 18f
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        isAntiAlias = true
+    }
+
+    val dateFormatter = SimpleDateFormat("dd.MM.yyyy", Locale.GERMANY)
+    val today = dateFormatter.format(Date())
+
+    // --- Seite 1: Deckblatt ---
+    var pageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, 1).create()
+    var page = pdfDocument.startPage(pageInfo)
+    var canvas: Canvas = page.canvas
+    var y = 80f
+
+    // Absender (Rechtsbündig)
     paint.textAlign = Paint.Align.RIGHT
-    canvas.drawText("${companyData.billerFirstName} ${companyData.billerSecondName}", 545f, yPos, paint)
-    yPos += 15f
-    paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
-    canvas.drawText("${companyData.billerStreetName} ${companyData.billerStreetNumber}", 545f, yPos, paint)
-    yPos += 15f
-    canvas.drawText("${companyData.billerPlzNumber} ${companyData.billerCityName}", 545f, yPos, paint)
-    yPos += 30f
+    paintBold.textAlign = Paint.Align.RIGHT
+    val rightPos = pageWidth - margin
 
-    // Customer Info (Left)
-    yPos = 160f
+    canvas.drawText("${companyData.billerFirstName} ${companyData.billerSecondName}", rightPos, y, paintBold)
+    y += 15f
+    canvas.drawText("${companyData.billerStreetName} ${companyData.billerStreetNumber}", rightPos, y, paint)
+    y += 15f
+    canvas.drawText("${companyData.billerPlzNumber} ${companyData.billerCityName}", rightPos, y, paint)
+    y += 30f
+    canvas.drawText("Steuernummer: ${companyData.taxNumber}", rightPos, y, paint)
+    y += 15f
+    canvas.drawText("IBAN: ${companyData.billerIban}", rightPos, y, paint)
+    y += 15f
+    canvas.drawText("BIC: ${companyData.billerBIC}", rightPos, y, paint)
+    y += 30f
+    if (companyData.signaturePath.isBlank()) {
+        canvas.drawText("Rechnungsdatum: $today", rightPos, y, paint)
+    }
+
+    // Titel
+    y = 280f
     paint.textAlign = Paint.Align.LEFT
-    paint.textSize = 10f
-    canvas.drawText(companyData.customerSecondNameOrOrga, margin, yPos, paint)
-    yPos += 15f
-    if (companyData.customerFirstName.isNotEmpty()) {
-        canvas.drawText(companyData.customerFirstName, margin, yPos, paint)
-        yPos += 15f
+    paintBold.textAlign = Paint.Align.LEFT
+    canvas.drawText("Honorarabrechnung", margin, y, titlePaint)
+    y += 30f
+
+    canvas.drawText("Rechnung: ${invoiceWithEntries.invoice.invoiceNumber}", margin, y, paintBold)
+    y += 30f
+
+    // Empfänger
+    canvas.drawText(companyData.customerSecondNameOrOrga, margin, y, paintBold)
+    y += 15f
+    if (companyData.customerFirstName.isNotBlank()) {
+        canvas.drawText(companyData.customerFirstName, margin, y, paint)
+        y += 15f
     }
-    canvas.drawText("${companyData.customerStreet} ${companyData.customerStreetNumber}", margin, yPos, paint)
-    yPos += 15f
-    canvas.drawText("${companyData.customerPlz} ${companyData.customerCityName}", margin, yPos, paint)
+    if (companyData.customerMailBox.isNotBlank()) {
+        canvas.drawText("Postfach ${companyData.customerMailBox}", margin, y, paint)
+    } else {
+        canvas.drawText("${companyData.customerStreet} ${companyData.customerStreetNumber}", margin, y, paint)
+    }
+    y += 15f
+    canvas.drawText("${companyData.customerPlz} ${companyData.customerCityName}", margin, y, paint)
+    y += 30f
 
-    // Invoice Header
-    yPos = 280f
-    titlePaint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-    titlePaint.textSize = 18f
-    canvas.drawText("Rechnung", margin, yPos, titlePaint)
+    // Bildungszentrum Info
+    canvas.drawText("Bildungszentrum: ${companyData.eduCenter}", margin, y, paint)
+    y += 15f
+    canvas.drawText("Standortnummer: ${companyData.locationNr}", margin, y, paint)
+    y += 15f
+    canvas.drawText("Schulart / Maßnahme: ${companyData.schoolType}", margin, y, paint)
+    y += 40f
 
-    yPos += 40f
-    paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
-    paint.textSize = 10f
-    val dateStr = SimpleDateFormat("dd.MM.yyyy", Locale.GERMANY).format(Date())
-    canvas.drawText("Rechnungsnummer: ${invoiceWithEntries.invoice.invoiceNumber}", margin, yPos, paint)
-    canvas.drawText("Datum: $dateStr", 545f, yPos, Paint(paint).apply { textAlign = Paint.Align.RIGHT })
+    // Zeitraum + Summen
+    val sortedEntries = invoiceWithEntries.entries.sortedBy {
+        try { dateFormatter.parse(it.date) } catch (e: Exception) { Date(0) }
+    }
+    val firstEntry = sortedEntries.firstOrNull()
+    if (firstEntry != null) {
+        val calendar = Calendar.getInstance()
+        calendar.time = dateFormatter.parse(firstEntry.date) ?: Date()
+        calendar.set(Calendar.DAY_OF_MONTH, 1)
+        val monthStart = dateFormatter.format(calendar.time)
+        calendar.set(Calendar.DAY_OF_MONTH, calendar.getActualMaximum(Calendar.DAY_OF_MONTH))
+        val monthEnd = dateFormatter.format(calendar.time)
 
-    yPos += 40f
-    // Table Header
-    paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-    canvas.drawText("Datum", margin, yPos, paint)
-    canvas.drawText("Beschreibung", 130f, yPos, paint)
-    canvas.drawText("U-Std", 400f, yPos, paint)
-    canvas.drawText("Betrag", 545f, yPos, Paint(paint).apply { textAlign = Paint.Align.RIGHT })
+        val summaryText = "Für den in der Zeit von $monthStart bis $monthEnd erteilten Fachunterricht und/oder andere Tätigkeiten gemäß meiner Aufstellung anbei, stelle ich wie folgt in Rechnung:"
+        y = drawTextWrapped(canvas, summaryText, margin, y, paint, contentWidth)
+        y += 20f
 
-    yPos += 5f
-    canvas.drawLine(margin, yPos, 545f, yPos, paint)
-    yPos += 20f
-
-    // Table Content
-    paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
-    val rate = invoiceWithEntries.invoice.rate
-
-    invoiceWithEntries.entries.forEach { entry ->
-        canvas.drawText(entry.date, margin, yPos, paint)
-        canvas.drawText(entry.teachingSubject, 130f, yPos, paint)
-        canvas.drawText("%.2f".format(entry.lessonUnits), 400f, yPos, paint)
-
-        val amount = entry.lessonUnits.multiply(BigDecimal("60"))
-            .divide(BigDecimal("45"), 10, RoundingMode.HALF_UP)
-            .multiply(rate)
-        canvas.drawText("${"%.2f".format(amount)} €", 545f, yPos, Paint(paint).apply { textAlign = Paint.Align.RIGHT })
-        yPos += 20f
+        canvas.drawText("UE Gesamt a 45 Min = ${invoiceWithEntries.totalLessonUnit}  x   ${invoiceWithEntries.invoice.rate} € Honorar/UE", margin, y, paintBold)
+        y += 20f
+        canvas.drawText("Summe = ${invoiceWithEntries.totalSum} €", margin, y, paintBold)
+        y += 40f
     }
 
-    yPos += 10f
-    canvas.drawLine(margin, yPos, 545f, yPos, paint)
-    yPos += 25f
-
-    // Total
-    paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-    paint.textSize = 12f
-    canvas.drawText("Gesamtbetrag:", 400f, yPos, Paint(paint).apply { textAlign = Paint.Align.RIGHT })
-    canvas.drawText("${"%.2f".format(invoiceWithEntries.totalSum)} €", 545f, yPos, Paint(paint).apply { textAlign = Paint.Align.RIGHT })
-
-    // Footer
-    yPos = 750f
-    paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
-    paint.textSize = 8f
-    paint.textAlign = Paint.Align.CENTER
-    canvas.drawText("Steuernummer: ${companyData.taxNumber} | IBAN: ${companyData.billerIban} | BIC: ${companyData.billerBIC}", 297.5f, yPos, paint)
+    // Unterschrift
+    if (companyData.signaturePath.isNotBlank()) {
+        try {
+            val bitmap = BitmapFactory.decodeFile(companyData.signaturePath)
+            if (bitmap != null) {
+                val dstWidth = 150f
+                val dstHeight = 50f
+                canvas.drawBitmap(bitmap, null, android.graphics.RectF(margin, y, margin + dstWidth, y + dstHeight), null)
+                y += 60f
+                canvas.drawLine(margin, y, margin + 200f, y, paint.apply { strokeWidth = 0.5f })
+                y += 15f
+                canvas.drawText("${companyData.billerCityName}, $today", margin, y, paint)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
 
     pdfDocument.finishPage(page)
 
-    val file = File(context.getExternalFilesDir(null), "Rechnung_${invoiceWithEntries.invoice.invoiceNumber}.pdf")
-    try {
-        pdfDocument.writeTo(FileOutputStream(file))
-        onFinished(file)
-    } catch (e: Exception) {
-        e.printStackTrace()
+    // --- Ab Seite 2: Tabelle ---
+    var currentEntryIndex = 0
+    val rowHeight = 25f
+    val tableTop = 80f
+    val tableBottom = pageHeight - 60f
+    var pageNumber = 2
+
+    while (currentEntryIndex < sortedEntries.size) {
+        pageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, pageNumber).create()
+        page = pdfDocument.startPage(pageInfo)
+        canvas = page.canvas
+        y = tableTop
+
+        // Header
+        paintBold.textAlign = Paint.Align.LEFT
+        canvas.drawText("Datum", margin, y, paintBold)
+        canvas.drawText("UE", margin + 80f, y, paintBold)
+        canvas.drawText("Kosten", margin + 160f, y, paintBold)
+        canvas.drawText("Unterrichtsfach/Klasse", margin + 240f, y, paintBold)
+        y += 10f
+        canvas.drawLine(margin, y, pageWidth - margin, y, paint)
+        y += rowHeight
+
+        paint.textAlign = Paint.Align.LEFT
+        while (currentEntryIndex < sortedEntries.size && y < tableBottom - 40f) {
+            val entry = sortedEntries[currentEntryIndex]
+            
+            // Umrechnung von Stunden in UE für die Tabelle
+            val ueValue = entry.lessonUnits.multiply(BigDecimal("60"))
+                .divide(BigDecimal("45"), 10, RoundingMode.HALF_UP)
+            val entryCost = ueValue.multiply(invoiceWithEntries.invoice.rate).setScale(2, RoundingMode.HALF_UP)
+
+            // Zebra-Streifen
+            if (currentEntryIndex % 2 == 1) {
+                val stripePaint = Paint().apply { color = Color.LTGRAY; alpha = 30 }
+                canvas.drawRect(margin, y - 15f, pageWidth - margin, y + 10f, stripePaint)
+            }
+
+            canvas.drawText(entry.date, margin, y, paint)
+            canvas.drawText(String.format(Locale.GERMAN, "%.2f", ueValue), margin + 80f, y, paint)
+            canvas.drawText("$entryCost €", margin + 160f, y, paint)
+            canvas.drawText(entry.teachingSubject, margin + 240f, y, paint)
+
+            y += rowHeight
+            currentEntryIndex++
+        }
+
+        // Summen auf der letzten Seite der Tabelle
+        if (currentEntryIndex == sortedEntries.size) {
+            y += 10f
+            canvas.drawText("UE Gesamt a 45 Min = ${invoiceWithEntries.totalLessonUnit}", margin, y, paintBold)
+            y += 20f
+            canvas.drawText("Summe = ${invoiceWithEntries.totalSum} €", margin, y, paintBold)
+        }
+
+        pdfDocument.finishPage(page)
+        pageNumber++
     }
+
+    val fileName = "Rechnung_${invoiceWithEntries.invoice.invoiceNumber}.pdf"
+    savePdf(context, pdfDocument, fileName, onFinished)
     pdfDocument.close()
+}
+
+private fun drawTextWrapped(canvas: Canvas, text: String, x: Float, yStart: Float, paint: Paint, maxWidth: Float): Float {
+    val words = text.split(" ")
+    var line = ""
+    var y = yStart
+    for (word in words) {
+        val testLine = if (line.isEmpty()) word else "$line $word"
+        val width = paint.measureText(testLine)
+        if (width > maxWidth) {
+            canvas.drawText(line, x, y, paint)
+            line = word
+            y += paint.textSize + 4
+        } else {
+            line = testLine
+        }
+    }
+    if (line.isNotEmpty()) {
+        canvas.drawText(line, x, y, paint)
+        y += paint.textSize + 4
+    }
+    return y
+}
+
+private fun savePdf(context: Context, pdfDocument: PdfDocument, fileName: String, onFinished: (File?) -> Unit) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        val contentValues = ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+            put(MediaStore.MediaColumns.MIME_TYPE, "application/pdf")
+            put(MediaStore.MediaColumns.RELATIVE_PATH, "${Environment.DIRECTORY_DOCUMENTS}/HonorarCraft")
+        }
+        val resolver = context.contentResolver
+        val uri = resolver.insert(MediaStore.Files.getContentUri("external"), contentValues)
+        if (uri != null) {
+            try {
+                resolver.openOutputStream(uri)?.use { pdfDocument.writeTo(it) }
+                Toast.makeText(context, "PDF gespeichert unter Dokumente/HonorarCraft", Toast.LENGTH_LONG).show()
+                onFinished(null)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Toast.makeText(context, "Fehler beim Speichern: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    } else {
+        val targetDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "HonorarCraft")
+        if (!targetDir.exists()) targetDir.mkdirs()
+        val file = File(targetDir, fileName)
+        try {
+            java.io.FileOutputStream(file).use { pdfDocument.writeTo(it) }
+            Toast.makeText(context, "PDF gespeichert: ${file.absolutePath}", Toast.LENGTH_LONG).show()
+            onFinished(file)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Toast.makeText(context, "Fehler beim Speichern: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
 }

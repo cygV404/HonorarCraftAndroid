@@ -30,13 +30,17 @@ data class InvoiceWithEntries(
 ) {
     val totalSum: BigDecimal
         get() = entries.fold(BigDecimal.ZERO) { acc, entry ->
-            acc.add(entry.lessonUnits.multiply(invoice.rate))
+            val ueValue = entry.lessonUnits.multiply(BigDecimal("60"))
+                .divide(BigDecimal("45"), 10, RoundingMode.HALF_UP)
+            acc.add(ueValue.multiply(invoice.rate))
         }.setScale(2, RoundingMode.HALF_UP)
 
 
     val totalLessonUnit: BigDecimal
         get() = entries.fold(BigDecimal.ZERO) { acc, entry ->
-            acc.add(entry.lessonUnits)
+            val ueValue = entry.lessonUnits.multiply(BigDecimal("60"))
+                .divide(BigDecimal("45"), 10, RoundingMode.HALF_UP)
+            acc.add(ueValue)
         }.setScale(2, RoundingMode.HALF_UP)
 
 }

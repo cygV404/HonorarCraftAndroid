@@ -54,12 +54,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _resetDataWindowTrigger = MutableStateFlow(0)
     val resetDataWindowTrigger: StateFlow<Int> = _resetDataWindowTrigger.asStateFlow()
 
-    // Selection for Year and Invoice
-    private val _selectedYear = MutableStateFlow(2026)
-    val selectedYear: StateFlow<Int> = _selectedYear
+    // Dashboard Year (for Revenue display)
+    private val _dashboardYear = MutableStateFlow(Calendar.getInstance().get(Calendar.YEAR))
+    val dashboardYear: StateFlow<Int> = _dashboardYear.asStateFlow()
 
-    private val _selectedInvoiceNumber = MutableStateFlow("1")
-    val selectedInvoiceNumber: StateFlow<String> = _selectedInvoiceNumber
+    // Selection for Year and Invoice (for Invoice Number generation)
+    private val _invoiceYear = MutableStateFlow(
+        sharedPrefs.getInt("invoice_year", Calendar.getInstance().get(Calendar.YEAR))
+    )
+    val invoiceYear: StateFlow<Int> = _invoiceYear.asStateFlow()
+
+    private val _invoiceMonth = MutableStateFlow(
+        sharedPrefs.getInt("invoice_month", Calendar.getInstance().get(Calendar.MONTH) + 1)
+    )
+    val invoiceMonth: StateFlow<Int> = _invoiceMonth.asStateFlow()
+
+    private val _selectedInvoiceNumber = MutableStateFlow(
+        sharedPrefs.getString("selected_invoice_number", "1") ?: "1"
+    )
+    val selectedInvoiceNumber: StateFlow<String> = _selectedInvoiceNumber.asStateFlow()
 
     private val _invoiceFormat = MutableStateFlow(
         InvoiceFormat.valueOf(
@@ -71,10 +84,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     val formattedInvoiceNumber: StateFlow<String> = combine(
         _selectedInvoiceNumber,
-        _invoiceFormat
-    ) { number, format ->
-        formatInvoice(number, format)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "1")
+        _invoiceFormat,
+        _invoiceYear,
+        _invoiceMonth
+    ) { number, format, year, month ->
+        formatInvoice(number, format, year, month)
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        formatInvoice(
+            _selectedInvoiceNumber.value,
+            _invoiceFormat.value,
+            _invoiceYear.value,
+            _invoiceMonth.value
+        )
+    )
 
     // Form State for CreateInvoice
     private val _currentDate = MutableStateFlow(getCurrentDateFormatted())
@@ -94,15 +118,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private var confirmationJob: Job? = null
 
-    // Yearly Revenue - optimized to use filtered DAO query
-    val yearlyRevenue: StateFlow<BigDecimal> = _selectedYear
+    // Yearly Revenue - linked to _dashboardYear
+    val yearlyRevenue: StateFlow<BigDecimal> = _dashboardYear
         .flatMapLatest { year ->
             invoiceDao.getInvoicesWithEntriesByYear(year.toString())
         }
         .map { invoices ->
             invoices.fold(BigDecimal.ZERO) { acc, invoiceWithEntries ->
-                // Filter entries by year (in case an invoice spans multiple years, though unlikely here)
-                val yearStr = _selectedYear.value.toString()
+                val yearStr = _dashboardYear.value.toString()
                 val entriesForYear = invoiceWithEntries.entries.filter { it.date.endsWith(yearStr) }
                 
                 val sumForYear = entriesForYear.fold(BigDecimal.ZERO) { entryAcc, entry ->
@@ -167,12 +190,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _hasUnsavedChanges.value = hasChanges
     }
 
-    fun setSelectedYear(year: Int) {
-        _selectedYear.value = year
+    fun setDashboardYear(year: Int) {
+        _dashboardYear.value = year
+    }
+
+    fun setInvoiceYear(year: Int) {
+        _invoiceYear.value = year
+        sharedPrefs.edit().putInt("invoice_year", year).apply()
+    }
+
+    fun setInvoiceMonth(month: Int) {
+        _invoiceMonth.value = month
+        sharedPrefs.edit().putInt("invoice_month", month).apply()
     }
 
     fun setSelectedInvoiceNumber(number: String) {
         _selectedInvoiceNumber.value = number
+        sharedPrefs.edit().putString("selected_invoice_number", number).apply()
     }
 
     fun setInvoiceFormat(format: InvoiceFormat) {
@@ -182,7 +216,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun incrementInvoiceNumber() {
         val current = _selectedInvoiceNumber.value.toIntOrNull() ?: 0
-        _selectedInvoiceNumber.value = (current + 1).toString()
+        setSelectedInvoiceNumber((current + 1).toString())
     }
 
     fun updateInvoiceForm(date: String? = null, hours: String? = null, subject: String? = null) {
@@ -301,11 +335,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 }
 
-fun formatInvoice(number: String, format: InvoiceFormat): String {
-    val calendar = Calendar.getInstance()
-    val year = calendar.get(Calendar.YEAR)
-    val month = calendar.get(Calendar.MONTH) + 1
-
+fun formatInvoice(number: String, format: InvoiceFormat, year: Int, month: Int): String {
     return when (format) {
         InvoiceFormat.NUMBER -> number
         InvoiceFormat.YEAR_NUMBER -> "$year-$number"

@@ -7,6 +7,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,12 +17,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -30,7 +34,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -43,6 +49,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -55,18 +63,24 @@ fun DashboardScreen(
     mainViewModel: MainViewModel,
 ) {
     val yearlyRevenueState by mainViewModel.yearlyRevenue.collectAsState()
-    val selectedYear by mainViewModel.selectedYear.collectAsState()
+    val dashboardYear by mainViewModel.dashboardYear.collectAsState()
+    val invoiceYear by mainViewModel.invoiceYear.collectAsState()
+    val invoiceMonth by mainViewModel.invoiceMonth.collectAsState()
     val rawInvoiceNumber by mainViewModel.selectedInvoiceNumber.collectAsState()
     val formattedInvoiceNumber by mainViewModel.formattedInvoiceNumber.collectAsState()
     val invoiceFormat by mainViewModel.invoiceFormat.collectAsState()
 
     DashboardContent(
         totalSum = yearlyRevenueState,
-        selectedYear = selectedYear,
+        dashboardYear = dashboardYear,
+        invoiceYear = invoiceYear,
+        invoiceMonth = invoiceMonth,
         rawInvoiceNumber = rawInvoiceNumber,
         displayInvoiceNumber = formattedInvoiceNumber,
         invoiceFormat = invoiceFormat,
-        onYearChange = { mainViewModel.setSelectedYear(it) },
+        onDashboardYearChange = { mainViewModel.setDashboardYear(it) },
+        onInvoiceYearChange = { mainViewModel.setInvoiceYear(it) },
+        onInvoiceMonthChange = { mainViewModel.setInvoiceMonth(it) },
         onInvoiceNumberChange = { mainViewModel.setSelectedInvoiceNumber(it) },
         onFormatChange = { mainViewModel.setInvoiceFormat(it) }
     )
@@ -76,17 +90,93 @@ fun DashboardScreen(
 @Composable
 fun DashboardContent(
     totalSum: BigDecimal,
-    selectedYear: Int,
+    dashboardYear: Int,
+    invoiceYear: Int,
+    invoiceMonth: Int,
     rawInvoiceNumber: String,
     displayInvoiceNumber: String,
     invoiceFormat: InvoiceFormat,
-    onYearChange: (Int) -> Unit,
+    onDashboardYearChange: (Int) -> Unit,
+    onInvoiceYearChange: (Int) -> Unit,
+    onInvoiceMonthChange: (Int) -> Unit,
     onInvoiceNumberChange: (String) -> Unit,
     onFormatChange: (InvoiceFormat) -> Unit
 ) {
     val yearlyRevenueFormatted = String.format(Locale.GERMAN, "%,.2f", totalSum)
     val invoiceNumberInt = rawInvoiceNumber.toIntOrNull() ?: 1
     var showMenu by remember { mutableStateOf(false) }
+
+    var showEditInvoiceDialog by remember { mutableStateOf(false) }
+
+    if (showEditInvoiceDialog) {
+        var editYear by remember { mutableStateOf(invoiceYear.toString()) }
+        var editMonth by remember { mutableStateOf(String.format(Locale.GERMANY, "%02d", invoiceMonth)) }
+        var editNumber by remember { mutableStateOf(rawInvoiceNumber) }
+
+        AlertDialog(
+            onDismissRequest = { showEditInvoiceDialog = false },
+            title = { Text("Rechnungsnummer bearbeiten") },
+            text = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    if (invoiceFormat == InvoiceFormat.YEAR_NUMBER || invoiceFormat == InvoiceFormat.YEAR_MONTH_NUMBER) {
+                        OutlinedTextField(
+                            value = editYear,
+                            onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) editYear = it },
+                            modifier = Modifier.width(85.dp),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            textStyle = MaterialTheme.typography.bodyLarge.copy(textAlign = TextAlign.Center)
+                        )
+                        Text(" - ", style = MaterialTheme.typography.headlineSmall)
+                    }
+
+                    if (invoiceFormat == InvoiceFormat.YEAR_MONTH_NUMBER) {
+                        OutlinedTextField(
+                            value = editMonth,
+                            onValueChange = { if (it.length <= 2 && it.all { c -> c.isDigit() }) editMonth = it },
+                            modifier = Modifier.width(60.dp),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            textStyle = MaterialTheme.typography.bodyLarge.copy(textAlign = TextAlign.Center)
+                        )
+                        Text(" - ", style = MaterialTheme.typography.headlineSmall)
+                    }
+
+                    OutlinedTextField(
+                        value = editNumber,
+                        onValueChange = { if (it.all { c -> c.isDigit() }) editNumber = it },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(textAlign = TextAlign.Center)
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val y = editYear.toIntOrNull() ?: invoiceYear
+                    val m = editMonth.toIntOrNull() ?: invoiceMonth
+                    if (editNumber.isNotEmpty()) {
+                        onInvoiceYearChange(y)
+                        onInvoiceMonthChange(m)
+                        onInvoiceNumberChange(editNumber)
+                    }
+                    showEditInvoiceDialog = false
+                }) {
+                    Text("Speichern")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditInvoiceDialog = false }) {
+                    Text("Abbrechen")
+                }
+            }
+        )
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
@@ -149,10 +239,10 @@ fun DashboardContent(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 DashboardControlCard(
-                    title = "Jahresumsatz $selectedYear",
+                    title = "Jahresumsatz $dashboardYear",
                     value = "$yearlyRevenueFormatted €",
-                    onDecrement = { if (selectedYear > 2000) onYearChange(selectedYear - 1) },
-                    onIncrement = { onYearChange(selectedYear + 1) },
+                    onDecrement = { if (dashboardYear > 2000) onDashboardYearChange(dashboardYear - 1) },
+                    onIncrement = { onDashboardYearChange(dashboardYear + 1) },
                     decrementIcon = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
                     incrementIcon = Icons.AutoMirrored.Filled.KeyboardArrowRight
                 )
@@ -163,7 +253,8 @@ fun DashboardContent(
                     onDecrement = { if (invoiceNumberInt > 0) onInvoiceNumberChange((invoiceNumberInt - 1).toString()) },
                     onIncrement = { onInvoiceNumberChange((invoiceNumberInt + 1).toString()) },
                     decrementIcon = Icons.Default.Remove,
-                    incrementIcon = Icons.Default.Add
+                    incrementIcon = Icons.Default.Add,
+                    onClick = { showEditInvoiceDialog = true }
                 )
 
                 Spacer(modifier = Modifier.height(32.dp))
@@ -179,7 +270,8 @@ fun DashboardControlCard(
     onDecrement: () -> Unit,
     onIncrement: () -> Unit,
     decrementIcon: ImageVector,
-    incrementIcon: ImageVector
+    incrementIcon: ImageVector,
+    onClick: (() -> Unit)? = null
 ) {
     ElevatedCard(
         modifier = Modifier
@@ -208,7 +300,10 @@ fun DashboardControlCard(
 
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
+                    .padding(vertical = 8.dp)
             ) {
                 Text(
                     text = title,
@@ -250,11 +345,15 @@ fun DashboardPreview() {
     HonorarCraftAndroidTheme {
         DashboardContent(
             totalSum = BigDecimal("12500.00"),
-            selectedYear = 2026,
+            dashboardYear = 2026,
+            invoiceYear = 2026,
+            invoiceMonth = 3,
             rawInvoiceNumber = "1",
             displayInvoiceNumber = "1",
             invoiceFormat = InvoiceFormat.NUMBER,
-            onYearChange = { },
+            onDashboardYearChange = { },
+            onInvoiceYearChange = { },
+            onInvoiceMonthChange = { },
             onInvoiceNumberChange = { },
             onFormatChange = { }
         )
