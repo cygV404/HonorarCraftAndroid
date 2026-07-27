@@ -51,7 +51,7 @@ interface InvoiceDao {
     @Query("""
         SELECT DISTINCT i.* FROM invoices i 
         JOIN invoice_entries e ON i.invoiceNumber = e.invoiceNumber 
-        WHERE e.date LIKE '%' || :year
+        WHERE e.date LIKE '%.' || :year
     """)
     fun getInvoicesWithEntriesByYear(year: String): Flow<List<InvoiceWithEntries>>
 }

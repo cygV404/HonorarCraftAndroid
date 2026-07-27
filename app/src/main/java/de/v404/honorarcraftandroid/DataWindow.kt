@@ -111,6 +111,10 @@ fun DataWindowContent(
         mutableStateOf(savedData?.copy() ?: CompanyData())
     }
 
+    var rateText by remember(savedData) {
+        mutableStateOf(savedData?.rate?.toString()?.replace(".", ",") ?: "")
+    }
+
     var showMenu by remember { mutableStateOf(false) }
     var showResetAllDialog by remember { mutableStateOf(false) }
     var showResetCompanyDialog by remember { mutableStateOf(false) }
@@ -498,9 +502,13 @@ fun DataWindowContent(
                 item {
                     DataField(
                         label = "Honorarsatz €",
-                        value = companyDataState.rate,
+                        value = rateText,
                         onValueChange = {
-                            companyDataState = companyDataState.copy(rate = it); onChanged()
+                            rateText = it
+                            it.replace(",", ".").toBigDecimalOrNull()?.let { parsed ->
+                                companyDataState = companyDataState.copy(rate = parsed)
+                            }
+                            onChanged()
                         })
                 }
             }

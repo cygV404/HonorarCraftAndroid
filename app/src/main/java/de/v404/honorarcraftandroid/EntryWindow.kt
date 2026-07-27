@@ -54,7 +54,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewModelScope
 import de.v404.honorarcraftandroid.ui.theme.HonorarCraftAndroidTheme
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
@@ -85,14 +84,7 @@ fun EntryWindowScreen(
         isLoading = isLoading,
         onInvoiceSelect = { mainViewModel.setSelectedInvoiceNumber(it) },
         onGeneratePdf = { context, cd, iwe ->
-            mainViewModel.viewModelScope.launch {
-                mainViewModel.setLoading(true)
-                val success = createInvoicePdf(context, iwe, cd) { _ -> }
-                if (success) {
-                    mainViewModel.incrementInvoiceNumber()
-                }
-                mainViewModel.setLoading(false)
-            }
+            mainViewModel.generatePdf(context, cd, iwe)
         },
         onDeleteEntries = { mainViewModel.deleteEntries(it) },
         selectedTabIndex = selectedTabIndex,
@@ -231,7 +223,7 @@ fun EntryWindowContent(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Sorting logic: Respects the isDescending state
-                val dateFormat = remember { SimpleDateFormat("dd.MM.yyyy", Locale.GERMANY) }
+                val dateFormat = remember { SimpleDateFormat(Constants.DATE_PATTERN, Locale.GERMANY) }
                 val sortedEntries = remember(invoiceWithEntries, isDescending) {
                     val entries = invoiceWithEntries?.entries ?: emptyList()
                     if (isDescending) {

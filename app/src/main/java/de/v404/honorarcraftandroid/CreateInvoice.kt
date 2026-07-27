@@ -86,7 +86,6 @@ fun CreateInvoiceScreen(
 
     val lastAddedEntry by mainViewModel.lastAddedEntry.collectAsState()
     val showConfirmation by mainViewModel.showEntryConfirmation.collectAsState()
-    val companyData by mainViewModel.companyData.collectAsState()
 
     CreateInvoiceContent(
         displayInvoiceNumber = formattedInvoiceNumber,
@@ -103,8 +102,7 @@ fun CreateInvoiceScreen(
         selectedTabIndex = selectedTabIndex,
         onTabSelected = onTabSelected,
         lastAddedEntry = lastAddedEntry,
-        showConfirmation = showConfirmation,
-        companyData = companyData
+        showConfirmation = showConfirmation
     )
 }
 
@@ -125,8 +123,7 @@ fun CreateInvoiceContent(
     selectedTabIndex: Int,
     onTabSelected: (Int) -> Unit,
     lastAddedEntry: InvoiceEntry? = null,
-    showConfirmation: Boolean = false,
-    companyData: CompanyData? = null
+    showConfirmation: Boolean = false
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
@@ -136,6 +133,8 @@ fun CreateInvoiceContent(
     val focusRequesterSubject = remember { FocusRequester() }
 
     var expandedSubject by remember { mutableStateOf(false) }
+
+    val canAddEntry = datum.isNotBlank() && stunden.isNotBlank()
 
     // Filter logic: Show all if empty, otherwise filter by start. Sorted by frequency (handled by DAO).
     val filteredSubjects = if (klasseFach.isBlank()) {
@@ -277,7 +276,7 @@ fun CreateInvoiceContent(
                             keyboardActions = KeyboardActions(
                                 onDone = {
                                     expandedSubject = false
-                                    if (datum.isNotBlank() && stunden.isNotBlank()) {
+                                    if (canAddEntry) {
                                         onAddEntry()
                                     }
                                 }
@@ -350,8 +349,7 @@ fun CreateInvoiceContent(
                     .padding(horizontal = 16.dp)
             ) {
                 lastAddedEntry?.let { entry ->
-                    val rateStr = companyData?.rate ?: "23.0"
-                    val rate = rateStr.replace(",", ".").toBigDecimalOrNull() ?: BigDecimal("23.0")
+                    val rate = entry.rate
                     val ueValue = entry.lessonUnits.multiply(BigDecimal("60"))
                         .divide(BigDecimal("45"), 10, RoundingMode.HALF_UP)
                     val entrySum = ueValue.multiply(rate).setScale(2, RoundingMode.HALF_UP)
@@ -403,14 +401,14 @@ fun CreateInvoiceContent(
 
             FloatingActionButton(
                 onClick = {
-                    if (datum.isNotBlank() && stunden.isNotBlank()) {
+                    if (canAddEntry) {
                         onAddEntry()
                     }
                 },
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(16.dp),
-                containerColor = if (datum.isNotBlank() && stunden.isNotBlank()) MaterialTheme.colorScheme.primary
+                containerColor = if (canAddEntry) MaterialTheme.colorScheme.primary
                 else MaterialTheme.colorScheme.surfaceVariant
             ) {
                 Icon(Icons.Filled.Add, contentDescription = "Hinzufügen")
@@ -424,7 +422,7 @@ fun CreateInvoiceContent(
             confirmButton = {
                 TextButton(onClick = {
                     val selectedDate = datePickerState.selectedDateMillis?.let {
-                        val sdf = SimpleDateFormat("dd.MM.yyyy", Locale.GERMANY)
+                        val sdf = SimpleDateFormat(Constants.DATE_PATTERN, Locale.GERMANY)
                         sdf.timeZone = TimeZone.getTimeZone("UTC")
                         sdf.format(Date(it))
                     } ?: ""

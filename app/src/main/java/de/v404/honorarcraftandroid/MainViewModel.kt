@@ -124,10 +124,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val yearlyRevenue: StateFlow<BigDecimal> = _dashboardYear
         .flatMapLatest { year ->
             invoiceDao.getInvoicesWithEntriesByYear(year.toString())
+                .map { invoices -> year to invoices }
         }
-        .map { invoices ->
+        .map { (year, invoices) ->
             invoices.fold(BigDecimal.ZERO) { acc, invoiceWithEntries ->
-                val yearStr = _dashboardYear.value.toString()
+                val yearStr = year.toString()
                 val entriesForYear = invoiceWithEntries.entries.filter { it.date.endsWith(yearStr) }
                 
                 val sumForYear = entriesForYear.fold(BigDecimal.ZERO) { entryAcc, entry ->
@@ -158,7 +159,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private fun getCurrentDateFormatted(): String {
-        val sdf = SimpleDateFormat("dd.MM.yyyy", Locale.GERMANY)
+        val sdf = SimpleDateFormat(Constants.DATE_PATTERN, Locale.GERMANY)
         return sdf.format(Date())
     }
 
@@ -260,8 +261,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val existingInvoice = invoiceDao.getInvoice(number)
             val cd = companyDao.getCompanyData().first()
-            val rateStr = cd?.rate ?: "23.0"
-            val rate = rateStr.replace(",", ".").toBigDecimalOrNull() ?: BigDecimal("23.0")
+            val rate = cd?.rate ?: Constants.DEFAULT_RATE
 
             if (existingInvoice == null) {
                 invoiceDao.insertInvoice(InvoiceData(invoiceNumber = number))
@@ -303,8 +303,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val existingInvoice = invoiceDao.getInvoice(number)
             val cd = companyDao.getCompanyData().first()
-            val rateStr = cd?.rate ?: "23.0"
-            val rate = rateStr.replace(",", ".").toBigDecimalOrNull() ?: BigDecimal("23.0")
+            val rate = cd?.rate ?: Constants.DEFAULT_RATE
 
             if (existingInvoice == null) {
                 invoiceDao.insertInvoice(InvoiceData(invoiceNumber = number))
@@ -340,10 +339,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun resetCompanyData() {
         viewModelScope.launch {
             _isLoading.value = true
-            companyDao.insertCompanyData(CompanyData(id = 1))
+            companyDao.insertCompanyData(CompanyData(id = 1, rate = Constants.DEFAULT_RATE))
             _isLoading.value = false
             _hasUnsavedChanges.value = false
             _resetDataWindowTrigger.value += 1
+        }
+    }
+
+    fun generatePdf(context: Context, companyData: CompanyData, invoiceWithEntries: InvoiceWithEntries) {
+        viewModelScope.launch {
+            setLoading(true)
+            val success = createInvoicePdf(context, invoiceWithEntries, companyData) { _ -> }
+            if (success) {
+                incrementInvoiceNumber()
+            }
+            setLoading(false)
         }
     }
 }

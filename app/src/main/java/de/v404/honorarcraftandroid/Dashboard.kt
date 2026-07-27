@@ -56,6 +56,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.v404.honorarcraftandroid.ui.theme.HonorarCraftAndroidTheme
 import java.math.BigDecimal
+import java.text.DecimalFormat
+import java.text.DecimalFormatSymbols
 import java.util.Locale
 
 @Composable
@@ -102,7 +104,8 @@ fun DashboardContent(
     onInvoiceNumberChange: (String) -> Unit,
     onFormatChange: (InvoiceFormat) -> Unit
 ) {
-    val yearlyRevenueFormatted = String.format(Locale.GERMAN, "%,.2f", totalSum)
+    val decimalFormat = remember { DecimalFormat("#,##0.00", DecimalFormatSymbols(Locale.GERMANY)) }
+    val yearlyRevenueFormatted = decimalFormat.format(totalSum)
     val invoiceNumberInt = rawInvoiceNumber.toIntOrNull() ?: 1
     var showMenu by remember { mutableStateOf(false) }
 
@@ -250,8 +253,18 @@ fun DashboardContent(
                 DashboardControlCard(
                     title = "Rechnungsnummer",
                     value = displayInvoiceNumber,
-                    onDecrement = { if (invoiceNumberInt > 0) onInvoiceNumberChange((invoiceNumberInt - 1).toString()) },
-                    onIncrement = { onInvoiceNumberChange((invoiceNumberInt + 1).toString()) },
+                    onDecrement = {
+                        if (invoiceNumberInt > 0) {
+                            val next = invoiceNumberInt - 1
+                            val formatted = String.format(Locale.GERMANY, "%0${rawInvoiceNumber.length}d", next)
+                            onInvoiceNumberChange(formatted)
+                        }
+                    },
+                    onIncrement = {
+                        val next = invoiceNumberInt + 1
+                        val formatted = String.format(Locale.GERMANY, "%0${rawInvoiceNumber.length}d", next)
+                        onInvoiceNumberChange(formatted)
+                    },
                     decrementIcon = Icons.Default.Remove,
                     incrementIcon = Icons.Default.Add,
                     onClick = { showEditInvoiceDialog = true }

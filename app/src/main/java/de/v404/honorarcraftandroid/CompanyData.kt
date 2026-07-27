@@ -2,6 +2,7 @@ package de.v404.honorarcraftandroid
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import java.math.BigDecimal
 
 @Entity(tableName = "company_data")
 data class CompanyData(
@@ -25,7 +26,7 @@ data class CompanyData(
     var taxNumber: String = "",
     var billerIban: String = "",
     var billerBIC: String = "",
-    var rate: String = "",
+    var rate: BigDecimal = Constants.DEFAULT_RATE,
     var signaturePath: String = "",
     var pdfPath: String = ""
 )

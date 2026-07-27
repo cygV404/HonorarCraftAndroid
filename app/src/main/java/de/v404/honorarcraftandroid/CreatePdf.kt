@@ -63,7 +63,7 @@ suspend fun createInvoicePdf(
         isAntiAlias = true
     }
 
-    val dateFormatter = SimpleDateFormat("dd.MM.yyyy", Locale.GERMANY)
+    val dateFormatter = SimpleDateFormat(Constants.DATE_PATTERN, Locale.GERMANY)
     val decimalFormat = DecimalFormat("#,##0.00", DecimalFormatSymbols(Locale.GERMANY))
     val today = dateFormatter.format(Date())
 
