@@ -56,7 +56,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewModelScope
 import de.v404.honorarcraftandroid.ui.theme.HonorarCraftAndroidTheme
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -88,9 +87,10 @@ fun EntryWindowScreen(
         onGeneratePdf = { context, cd, iwe ->
             mainViewModel.viewModelScope.launch {
                 mainViewModel.setLoading(true)
-                delay(1500) // Simulation for wavy effect visibility
-                createInvoicePdf(context, iwe, cd) { _ -> }
-                mainViewModel.incrementInvoiceNumber()
+                val success = createInvoicePdf(context, iwe, cd) { _ -> }
+                if (success) {
+                    mainViewModel.incrementInvoiceNumber()
+                }
                 mainViewModel.setLoading(false)
             }
         },
@@ -266,7 +266,7 @@ fun EntryWindowContent(
                         items = sortedEntries,
                         key = { it.id }
                     ) { entry ->
-                        val rate = invoiceWithEntries?.invoice?.rate ?: BigDecimal.ZERO
+                        val rate = entry.rate
                         val ueValue = entry.lessonUnits.multiply(BigDecimal("60"))
                             .divide(BigDecimal("45"), 10, RoundingMode.HALF_UP)
                         val entrySum = ueValue.multiply(rate).setScale(2, RoundingMode.HALF_UP)
@@ -302,18 +302,20 @@ fun EntryWindowContent(
             if (!isSelectionMode) {
                 FloatingActionButton(
                     onClick = {
-                        if (companyData != null && invoiceWithEntries != null) {
-                            onGeneratePdf(context, companyData, invoiceWithEntries)
-                        } else {
-                            Toast.makeText(context, "Daten unvollständig", Toast.LENGTH_SHORT)
-                                .show()
+                        if (!isLoading) {
+                            if (companyData != null && invoiceWithEntries != null) {
+                                onGeneratePdf(context, companyData, invoiceWithEntries)
+                            } else {
+                                Toast.makeText(context, "Daten unvollständig", Toast.LENGTH_SHORT)
+                                    .show()
+                            }
                         }
                     },
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .padding(16.dp),
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
+                    containerColor = if (isLoading) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.primary,
+                    contentColor = if (isLoading) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onPrimary
                 ) {
                     Icon(Icons.Filled.PictureAsPdf, contentDescription = "PDF generieren")
                 }

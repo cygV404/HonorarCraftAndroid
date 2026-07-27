@@ -49,6 +49,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
@@ -496,12 +497,12 @@ fun DataWindowContent(
             }
 
             FloatingActionButton(
-                onClick = { onSave(companyDataState) },
+                onClick = { if (!isLoading) onSave(companyDataState) },
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(16.dp),
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
+                containerColor = if (isLoading) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.primary,
+                contentColor = if (isLoading) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onPrimary
             ) {
                 Icon(Icons.Filled.Save, contentDescription = "Speichern")
             }
@@ -510,7 +511,8 @@ fun DataWindowContent(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.3f)),
+                        .background(Color.Black.copy(alpha = 0.3f))
+                        .pointerInput(Unit) { },
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator(

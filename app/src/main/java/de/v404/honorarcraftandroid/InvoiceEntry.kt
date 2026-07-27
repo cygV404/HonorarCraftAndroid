@@ -27,5 +27,6 @@ data class InvoiceEntry(
     var invoiceNumber: String, // Foreign key to link to an InvoiceData
     val date: String,
     val lessonUnits: BigDecimal,
-    val teachingSubject: String
+    val teachingSubject: String,
+    val rate: BigDecimal = BigDecimal("23.0")
 )

@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -131,7 +132,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val sumForYear = entriesForYear.fold(BigDecimal.ZERO) { entryAcc, entry ->
                     val ue = entry.lessonUnits.multiply(BigDecimal("60"))
                         .divide(BigDecimal("45"), 10, RoundingMode.HALF_UP)
-                    entryAcc.add(ue.multiply(invoiceWithEntries.invoice.rate))
+                    entryAcc.add(ue.multiply(entry.rate))
                 }
                 acc.add(sumForYear)
             }.setScale(2, RoundingMode.HALF_UP)
@@ -140,7 +141,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     // Company Data
     val companyData: StateFlow<CompanyData?> = companyDao.getCompanyData()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     // Current Invoice with Entries - reactive to _selectedInvoiceNumber
     val currentInvoiceWithEntries: StateFlow<InvoiceWithEntries?> = _selectedInvoiceNumber
@@ -229,7 +230,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _isLoading.value = true
             companyDao.insertCompanyData(data)
-            delay(1000)
             _isLoading.value = false
             _hasUnsavedChanges.value = false
         }
@@ -253,18 +253,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         viewModelScope.launch {
             val existingInvoice = invoiceDao.getInvoice(number)
+            val cd = companyDao.getCompanyData().first()
+            val rateStr = cd?.rate ?: "23.0"
+            val rate = rateStr.replace(",", ".").toBigDecimalOrNull() ?: BigDecimal("23.0")
 
             if (existingInvoice == null) {
-                val rateStr = companyData.value?.rate ?: "23.0"
-                val rate = rateStr.replace(",", ".").toBigDecimalOrNull() ?: BigDecimal("23.0")
-                invoiceDao.insertInvoice(InvoiceData(invoiceNumber = number, rate = rate))
+                invoiceDao.insertInvoice(InvoiceData(invoiceNumber = number))
             }
 
             val entry = InvoiceEntry(
                 invoiceNumber = number,
                 date = datum,
                 lessonUnits = hours,
-                teachingSubject = klasseFach
+                teachingSubject = klasseFach,
+                rate = rate
             )
             invoiceDao.insertEntry(entry)
 
@@ -277,7 +279,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _currentDate.value = getCurrentDateFormatted()
 
             confirmationJob = launch {
-                delay(4500)
+                delay(4500)  // Delay für 4.5 Sekunden
                 _showEntryConfirmation.value = false
             }
         }
@@ -289,18 +291,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         viewModelScope.launch {
             val existingInvoice = invoiceDao.getInvoice(number)
+            val cd = companyDao.getCompanyData().first()
+            val rateStr = cd?.rate ?: "23.0"
+            val rate = rateStr.replace(",", ".").toBigDecimalOrNull() ?: BigDecimal("23.0")
 
             if (existingInvoice == null) {
-                val rateStr = companyData.value?.rate ?: "23.0"
-                val rate = rateStr.replace(",", ".").toBigDecimalOrNull() ?: BigDecimal("23.0")
-                invoiceDao.insertInvoice(InvoiceData(invoiceNumber = number, rate = rate))
+                invoiceDao.insertInvoice(InvoiceData(invoiceNumber = number))
             }
 
             val entry = InvoiceEntry(
                 invoiceNumber = number,
                 date = datum,
                 lessonUnits = hours,
-                teachingSubject = klasseFach
+                teachingSubject = klasseFach,
+                rate = rate
             )
             invoiceDao.insertEntry(entry)
         }
@@ -316,7 +320,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _isLoading.value = true
             database.clearAllTables()
-            delay(1000)
             _isLoading.value = false
             _hasUnsavedChanges.value = false
             _resetDataWindowTrigger.value += 1
@@ -327,7 +330,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _isLoading.value = true
             companyDao.insertCompanyData(CompanyData(id = 1))
-            delay(500)
             _isLoading.value = false
             _hasUnsavedChanges.value = false
             _resetDataWindowTrigger.value += 1

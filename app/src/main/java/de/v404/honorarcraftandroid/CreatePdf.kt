@@ -12,23 +12,29 @@ import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import android.widget.Toast
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.math.BigDecimal
 import java.math.RoundingMode
+import java.text.DecimalFormat
+import java.text.DecimalFormatSymbols
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
-fun createInvoicePdf(
+suspend fun createInvoicePdf(
     context: Context,
     invoiceWithEntries: InvoiceWithEntries,
     companyData: CompanyData?,
     onFinished: (File?) -> Unit
-) {
+): Boolean = withContext(Dispatchers.IO) {
     if (companyData == null) {
-        Toast.makeText(context, "Unternehmensdaten fehlen!", Toast.LENGTH_SHORT).show()
-        return
+        withContext(Dispatchers.Main) {
+            Toast.makeText(context, "Unternehmensdaten fehlen!", Toast.LENGTH_SHORT).show()
+        }
+        return@withContext false
     }
 
     val pdfDocument = PdfDocument()
@@ -51,8 +57,14 @@ fun createInvoicePdf(
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
         isAntiAlias = true
     }
+    val linePaint = Paint().apply {
+        strokeWidth = 0.5f
+        style = Paint.Style.STROKE
+        isAntiAlias = true
+    }
 
     val dateFormatter = SimpleDateFormat("dd.MM.yyyy", Locale.GERMANY)
+    val decimalFormat = DecimalFormat("#,##0.00", DecimalFormatSymbols(Locale.GERMANY))
     val today = dateFormatter.format(Date())
 
     // --- Seite 1: Deckblatt ---
@@ -123,7 +135,11 @@ fun createInvoicePdf(
     val firstEntry = sortedEntries.firstOrNull()
     if (firstEntry != null) {
         val calendar = Calendar.getInstance()
-        calendar.time = dateFormatter.parse(firstEntry.date) ?: Date()
+        try {
+            calendar.time = dateFormatter.parse(firstEntry.date) ?: Date()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
         calendar.set(Calendar.DAY_OF_MONTH, 1)
         val monthStart = dateFormatter.format(calendar.time)
         calendar.set(Calendar.DAY_OF_MONTH, calendar.getActualMaximum(Calendar.DAY_OF_MONTH))
@@ -133,9 +149,16 @@ fun createInvoicePdf(
         y = drawTextWrapped(canvas, summaryText, margin, y, paint, contentWidth)
         y += 20f
 
-        canvas.drawText("UE Gesamt a 45 Min = ${invoiceWithEntries.totalLessonUnit}  x   ${invoiceWithEntries.invoice.rate} € Honorar/UE", margin, y, paintBold)
+        // Prüfen ob alle Sätze gleich sind
+        val allRates = invoiceWithEntries.entries.map { it.rate }.distinct()
+        if (allRates.size == 1) {
+            val rate = allRates.first()
+            canvas.drawText("UE Gesamt a 45 Min = ${invoiceWithEntries.totalLessonUnit}  x   ${decimalFormat.format(rate)} € Honorar/UE", margin, y, paintBold)
+        } else {
+            canvas.drawText("UE Gesamt a 45 Min = ${invoiceWithEntries.totalLessonUnit} (verschiedene Sätze gemäß Aufstellung)", margin, y, paintBold)
+        }
         y += 20f
-        canvas.drawText("Summe = ${invoiceWithEntries.totalSum} €", margin, y, paintBold)
+        canvas.drawText("Summe = ${decimalFormat.format(invoiceWithEntries.totalSum)} €", margin, y, paintBold)
         y += 40f
     }
 
@@ -148,9 +171,10 @@ fun createInvoicePdf(
                 val dstHeight = 50f
                 canvas.drawBitmap(bitmap, null, android.graphics.RectF(margin, y, margin + dstWidth, y + dstHeight), null)
                 y += 60f
-                canvas.drawLine(margin, y, margin + 200f, y, paint.apply { strokeWidth = 0.5f })
+                canvas.drawLine(margin, y, margin + 200f, y, linePaint)
                 y += 15f
                 canvas.drawText("${companyData.billerCityName}, $today", margin, y, paint)
+                bitmap.recycle()
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -165,6 +189,7 @@ fun createInvoicePdf(
     val tableTop = 80f
     val tableBottom = pageHeight - 60f
     var pageNumber = 2
+    val stripePaint = Paint().apply { color = Color.LTGRAY; alpha = 30 }
 
     while (currentEntryIndex < sortedEntries.size) {
         pageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, pageNumber).create()
@@ -179,7 +204,7 @@ fun createInvoicePdf(
         canvas.drawText("Kosten", margin + 160f, y, paintBold)
         canvas.drawText("Unterrichtsfach/Klasse", margin + 240f, y, paintBold)
         y += 10f
-        canvas.drawLine(margin, y, pageWidth - margin, y, paint)
+        canvas.drawLine(margin, y, pageWidth - margin, y, linePaint)
         y += rowHeight
 
         paint.textAlign = Paint.Align.LEFT
@@ -189,18 +214,22 @@ fun createInvoicePdf(
             // Umrechnung von Stunden in UE für die Tabelle
             val ueValue = entry.lessonUnits.multiply(BigDecimal("60"))
                 .divide(BigDecimal("45"), 10, RoundingMode.HALF_UP)
-            val entryCost = ueValue.multiply(invoiceWithEntries.invoice.rate).setScale(2, RoundingMode.HALF_UP)
+            val entryCost = ueValue.multiply(entry.rate).setScale(2, RoundingMode.HALF_UP)
 
             // Zebra-Streifen
             if (currentEntryIndex % 2 == 1) {
-                val stripePaint = Paint().apply { color = Color.LTGRAY; alpha = 30 }
                 canvas.drawRect(margin, y - 15f, pageWidth - margin, y + 10f, stripePaint)
             }
 
             canvas.drawText(entry.date, margin, y, paint)
-            canvas.drawText(String.format(Locale.GERMAN, "%.2f", ueValue), margin + 80f, y, paint)
-            canvas.drawText("$entryCost €", margin + 160f, y, paint)
+            canvas.drawText(decimalFormat.format(ueValue), margin + 80f, y, paint)
+            canvas.drawText("${decimalFormat.format(entryCost)} €", margin + 160f, y, paint)
+            
+            // Text Clipping für Unterrichtsfach/Klasse
+            canvas.save()
+            canvas.clipRect(margin + 240f, y - 15f, pageWidth - margin, y + 10f)
             canvas.drawText(entry.teachingSubject, margin + 240f, y, paint)
+            canvas.restore()
 
             y += rowHeight
             currentEntryIndex++
@@ -211,7 +240,7 @@ fun createInvoicePdf(
             y += 10f
             canvas.drawText("UE Gesamt a 45 Min = ${invoiceWithEntries.totalLessonUnit}", margin, y, paintBold)
             y += 20f
-            canvas.drawText("Summe = ${invoiceWithEntries.totalSum} €", margin, y, paintBold)
+            canvas.drawText("Summe = ${decimalFormat.format(invoiceWithEntries.totalSum)} €", margin, y, paintBold)
         }
 
         pdfDocument.finishPage(page)
@@ -219,8 +248,9 @@ fun createInvoicePdf(
     }
 
     val fileName = "Rechnung_${invoiceWithEntries.invoice.invoiceNumber}.pdf"
-    savePdf(context, pdfDocument, fileName, onFinished)
+    val success = savePdf(context, pdfDocument, fileName, onFinished)
     pdfDocument.close()
+    return@withContext success
 }
 
 private fun drawTextWrapped(canvas: Canvas, text: String, x: Float, yStart: Float, paint: Paint, maxWidth: Float): Float {
@@ -245,7 +275,7 @@ private fun drawTextWrapped(canvas: Canvas, text: String, x: Float, yStart: Floa
     return y
 }
 
-private fun savePdf(context: Context, pdfDocument: PdfDocument, fileName: String, onFinished: (File?) -> Unit) {
+private suspend fun savePdf(context: Context, pdfDocument: PdfDocument, fileName: String, onFinished: (File?) -> Unit): Boolean {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
         val contentValues = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
@@ -257,12 +287,24 @@ private fun savePdf(context: Context, pdfDocument: PdfDocument, fileName: String
         if (uri != null) {
             try {
                 resolver.openOutputStream(uri)?.use { pdfDocument.writeTo(it) }
-                Toast.makeText(context, "PDF gespeichert unter Dokumente/HonorarCraft", Toast.LENGTH_LONG).show()
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, "PDF gespeichert unter Dokumente/HonorarCraft", Toast.LENGTH_LONG).show()
+                }
                 onFinished(null)
+                return true
             } catch (e: Exception) {
                 e.printStackTrace()
-                Toast.makeText(context, "Fehler beim Speichern: ${e.message}", Toast.LENGTH_SHORT).show()
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, "Fehler beim Speichern: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+                return false
             }
+        } else {
+            withContext(Dispatchers.Main) {
+                Toast.makeText(context, "Fehler beim Erstellen der Datei im MediaStore", Toast.LENGTH_SHORT).show()
+            }
+            onFinished(null)
+            return false
         }
     } else {
         val targetDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "HonorarCraft")
@@ -270,11 +312,17 @@ private fun savePdf(context: Context, pdfDocument: PdfDocument, fileName: String
         val file = File(targetDir, fileName)
         try {
             java.io.FileOutputStream(file).use { pdfDocument.writeTo(it) }
-            Toast.makeText(context, "PDF gespeichert: ${file.absolutePath}", Toast.LENGTH_LONG).show()
+            withContext(Dispatchers.Main) {
+                Toast.makeText(context, "PDF gespeichert: ${file.absolutePath}", Toast.LENGTH_LONG).show()
+            }
             onFinished(file)
+            return true
         } catch (e: Exception) {
             e.printStackTrace()
-            Toast.makeText(context, "Fehler beim Speichern: ${e.message}", Toast.LENGTH_SHORT).show()
+            withContext(Dispatchers.Main) {
+                Toast.makeText(context, "Fehler beim Speichern: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+            return false
         }
     }
 }

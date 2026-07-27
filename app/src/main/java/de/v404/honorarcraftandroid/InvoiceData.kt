@@ -12,8 +12,7 @@ import java.math.RoundingMode
  */
 @Entity(tableName = "invoices")
 data class InvoiceData(
-    @PrimaryKey val invoiceNumber: String,
-    val rate: BigDecimal
+    @PrimaryKey val invoiceNumber: String
 )
 
 /**
@@ -32,7 +31,7 @@ data class InvoiceWithEntries(
         get() = entries.fold(BigDecimal.ZERO) { acc, entry ->
             val ueValue = entry.lessonUnits.multiply(BigDecimal("60"))
                 .divide(BigDecimal("45"), 10, RoundingMode.HALF_UP)
-            acc.add(ueValue.multiply(invoice.rate))
+            acc.add(ueValue.multiply(entry.rate))
         }.setScale(2, RoundingMode.HALF_UP)
 
 

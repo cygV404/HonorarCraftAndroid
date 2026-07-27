@@ -4,8 +4,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.Crossfade
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
@@ -28,14 +26,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.viewmodel.compose.viewModel
 import de.v404.honorarcraftandroid.ui.theme.HonorarCraftAndroidTheme
-import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -46,30 +40,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            // State, um zu kontrollieren, wann die Animation endet
-            var showSplashScreen by remember { mutableStateOf(true) }
-
-            // Timer für die Splash-Screen-Dauer (auf 3500ms erhöht, passend zur AnimatedSplashScreen4 Animation)
-            LaunchedEffect(Unit) {
-                delay(3500)
-                showSplashScreen = false
-            }
-
             HonorarCraftAndroidTheme {
-                // Crossfade für einen weichen Übergang zwischen Splash und App
-                Crossfade(
-                    targetState = showSplashScreen,
-                    animationSpec = tween(durationMillis = 800),
-                    label = "splashTransition"
-                ) { isSplashing ->
-                    if (isSplashing) {
-                        // AnimatedSplashScreen4 anzeigen
-                        AnimatedSplashScreen4()
-                    } else {
-                        // Dein eigentlicher App-Inhalt
-                        MainAppContent()
-                    }
-                }
+                MainAppContent()
             }
         }
     }
