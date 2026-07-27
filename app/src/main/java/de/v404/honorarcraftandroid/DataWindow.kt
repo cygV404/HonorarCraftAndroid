@@ -1,6 +1,7 @@
 package de.v404.honorarcraftandroid
 
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -118,16 +119,24 @@ fun DataWindowContent(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
-            val inputStream = context.contentResolver.openInputStream(it)
-            val file = File(context.filesDir, "signature.png")
-            val outputStream = FileOutputStream(file)
-            inputStream?.use { input ->
-                outputStream.use { output ->
-                    input.copyTo(output)
+            try {
+                val inputStream = context.contentResolver.openInputStream(it)
+                if (inputStream == null) {
+                    Toast.makeText(context, "Datei konnte nicht geöffnet werden", Toast.LENGTH_SHORT).show()
+                    return@let
                 }
+                val file = File(context.filesDir, "signature.png")
+                FileOutputStream(file).use { output ->
+                    inputStream.use { input ->
+                        input.copyTo(output)
+                    }
+                }
+                companyDataState = companyDataState.copy(signaturePath = file.absolutePath)
+                onChanged()
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Toast.makeText(context, "Fehler beim Kopieren der Signatur", Toast.LENGTH_SHORT).show()
             }
-            companyDataState = companyDataState.copy(signaturePath = file.absolutePath)
-            onChanged()
         }
     }
 

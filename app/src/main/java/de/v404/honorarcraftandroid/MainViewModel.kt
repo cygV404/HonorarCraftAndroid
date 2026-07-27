@@ -2,6 +2,7 @@ package de.v404.honorarcraftandroid
 
 import android.app.Application
 import android.content.Context
+import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -249,7 +250,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (datum.isBlank() || stunden.isBlank()) return
 
         val number = _selectedInvoiceNumber.value
-        val hours = stunden.replace(",", ".").toBigDecimalOrNull() ?: BigDecimal.ZERO
+        val hours = stunden.replace(",", ".").toBigDecimalOrNull()
+
+        if (hours == null) {
+            Toast.makeText(getApplication(), "Ungültige Stundenzahl", Toast.LENGTH_SHORT).show()
+            return
+        }
 
         viewModelScope.launch {
             val existingInvoice = invoiceDao.getInvoice(number)
@@ -287,7 +293,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun addEntry(datum: String, stunden: String, klasseFach: String) {
         val number = _selectedInvoiceNumber.value
-        val hours = stunden.replace(",", ".").toBigDecimalOrNull() ?: BigDecimal.ZERO
+        val hours = stunden.replace(",", ".").toBigDecimalOrNull()
+
+        if (hours == null) {
+            Toast.makeText(getApplication(), "Ungültige Stundenzahl", Toast.LENGTH_SHORT).show()
+            return
+        }
 
         viewModelScope.launch {
             val existingInvoice = invoiceDao.getInvoice(number)
