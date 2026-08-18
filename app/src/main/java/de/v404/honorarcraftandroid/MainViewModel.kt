@@ -5,6 +5,7 @@ import android.content.Context
 import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -18,6 +19,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.text.SimpleDateFormat
@@ -77,10 +79,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val selectedInvoiceNumber: StateFlow<String> = _selectedInvoiceNumber.asStateFlow()
 
     private val _invoiceFormat = MutableStateFlow(
-        InvoiceFormat.valueOf(
-            sharedPrefs.getString("invoice_format", InvoiceFormat.NUMBER.name)
-                ?: InvoiceFormat.NUMBER.name
-        )
+        runCatching {
+            InvoiceFormat.valueOf(
+                sharedPrefs.getString("invoice_format", InvoiceFormat.NUMBER.name)
+                    ?: InvoiceFormat.NUMBER.name
+            )
+        }.getOrDefault(InvoiceFormat.NUMBER)
     )
     val invoiceFormat: StateFlow<InvoiceFormat> = _invoiceFormat.asStateFlow()
 
@@ -329,20 +333,50 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun resetAllData() {
         viewModelScope.launch {
             _isLoading.value = true
-            database.clearAllTables()
-            _isLoading.value = false
-            _hasUnsavedChanges.value = false
-            _resetDataWindowTrigger.value += 1
+            try {
+                withContext(Dispatchers.IO) {
+                    database.clearAllTables()
+                    sharedPrefs.edit().clear().commit()
+                }
+
+                // Reset StateFlows to default values
+                val now = Calendar.getInstance()
+                _dashboardYear.value = now.get(Calendar.YEAR)
+                _invoiceYear.value = now.get(Calendar.YEAR)
+                _invoiceMonth.value = now.get(Calendar.MONTH) + 1
+                _selectedInvoiceNumber.value = "1"
+                _invoiceFormat.value = InvoiceFormat.NUMBER
+
+                _hasUnsavedChanges.value = false
+                _resetDataWindowTrigger.value += 1
+            } catch (e: Exception) {
+                e.printStackTrace()
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(getApplication(), "Fehler beim Zurücksetzen: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            } finally {
+                _isLoading.value = false
+            }
         }
     }
 
     fun resetCompanyData() {
         viewModelScope.launch {
             _isLoading.value = true
-            companyDao.insertCompanyData(CompanyData(id = 1, rate = Constants.DEFAULT_RATE))
-            _isLoading.value = false
-            _hasUnsavedChanges.value = false
-            _resetDataWindowTrigger.value += 1
+            try {
+                withContext(Dispatchers.IO) {
+                    companyDao.insertCompanyData(CompanyData(id = 1, rate = Constants.DEFAULT_RATE))
+                }
+                _hasUnsavedChanges.value = false
+                _resetDataWindowTrigger.value += 1
+            } catch (e: Exception) {
+                e.printStackTrace()
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(getApplication(), "Fehler beim Zurücksetzen: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            } finally {
+                _isLoading.value = false
+            }
         }
     }
 

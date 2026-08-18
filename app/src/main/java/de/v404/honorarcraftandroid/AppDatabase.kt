@@ -67,7 +67,7 @@ interface CompanyDao {
 
 @Database(
     entities = [InvoiceData::class, InvoiceEntry::class, CompanyData::class],
-    version = 6,
+    version = 8,
     exportSchema = true
 )
 @TypeConverters(Converters::class)

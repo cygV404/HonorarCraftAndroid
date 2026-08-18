@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="splash_background">#FFFFFF</color>
+    <color name="splash_background">#000000</color>
+    <color name="hc_brand_h">#18FFFF</color>
+    <color name="hc_brand_c">#00E676</color>
     <color name="hc_icon_color">#000000</color>
 </resources>

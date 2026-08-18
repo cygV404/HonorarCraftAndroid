@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
@@ -105,11 +106,22 @@ fun DashboardContent(
     onFormatChange: (InvoiceFormat) -> Unit
 ) {
     val decimalFormat = remember { DecimalFormat("#,##0.00", DecimalFormatSymbols(Locale.GERMANY)) }
-    val yearlyRevenueFormatted = decimalFormat.format(totalSum)
+    val yearlyRevenueFormatted = remember(totalSum) {
+        try {
+            decimalFormat.format(totalSum)
+        } catch (e: Exception) {
+            "0,00"
+        }
+    }
     val invoiceNumberInt = rawInvoiceNumber.toIntOrNull() ?: 1
     var showMenu by remember { mutableStateOf(false) }
+    var showAboutDialog by remember { mutableStateOf(false) }
 
     var showEditInvoiceDialog by remember { mutableStateOf(false) }
+
+    if (showAboutDialog) {
+        AboutDialog(onDismiss = { showAboutDialog = false })
+    }
 
     if (showEditInvoiceDialog) {
         var editYear by remember { mutableStateOf(invoiceYear.toString()) }
@@ -191,6 +203,9 @@ fun DashboardContent(
                 )
             },
             actions = {
+                IconButton(onClick = { showAboutDialog = true }) {
+                    Icon(Icons.Default.Info, contentDescription = "Über diese App")
+                }
                 Box {
                     IconButton(onClick = { showMenu = true }) {
                         Icon(Icons.Default.Settings, contentDescription = "Einstellungen")
@@ -256,13 +271,15 @@ fun DashboardContent(
                     onDecrement = {
                         if (invoiceNumberInt > 0) {
                             val next = invoiceNumberInt - 1
-                            val formatted = String.format(Locale.GERMANY, "%0${rawInvoiceNumber.length}d", next)
+                            val length = rawInvoiceNumber.length.coerceAtLeast(1)
+                            val formatted = String.format(Locale.GERMANY, "%0${length}d", next)
                             onInvoiceNumberChange(formatted)
                         }
                     },
                     onIncrement = {
                         val next = invoiceNumberInt + 1
-                        val formatted = String.format(Locale.GERMANY, "%0${rawInvoiceNumber.length}d", next)
+                        val length = rawInvoiceNumber.length.coerceAtLeast(1)
+                        val formatted = String.format(Locale.GERMANY, "%0${length}d", next)
                         onInvoiceNumberChange(formatted)
                     },
                     decrementIcon = Icons.Default.Remove,

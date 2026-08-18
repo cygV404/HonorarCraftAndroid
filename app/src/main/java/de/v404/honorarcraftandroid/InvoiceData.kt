@@ -1,5 +1,6 @@
 package de.v404.honorarcraftandroid
 
+import androidx.annotation.Keep
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.PrimaryKey
@@ -10,6 +11,7 @@ import java.math.RoundingMode
 /**
  * Represents the main invoice data stored in the 'invoices' table.
  */
+@Keep
 @Entity(tableName = "invoices")
 data class InvoiceData(
     @PrimaryKey val invoiceNumber: String
@@ -19,6 +21,7 @@ data class InvoiceData(
  * Represents the one-to-many relationship between an Invoice and its Entries.
  * This class is used to query an invoice with all its corresponding line items.
  */
+@Keep
 data class InvoiceWithEntries(
     @Embedded val invoice: InvoiceData,
     @Relation(

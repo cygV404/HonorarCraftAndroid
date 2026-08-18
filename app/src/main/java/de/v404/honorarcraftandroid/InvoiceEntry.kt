@@ -1,11 +1,13 @@
 package de.v404.honorarcraftandroid
 
+import androidx.annotation.Keep
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import java.math.BigDecimal
 
+@Keep
 @Entity(
     tableName = "invoice_entries",
     foreignKeys = [
