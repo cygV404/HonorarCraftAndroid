@@ -38,6 +38,11 @@ class MainActivity : ComponentActivity() {
 
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        
+        // Deaktiviert den erzwungenen Kontrast der Navigationsleiste für echte Edge-to-Edge Anzeige
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            window.isNavigationBarContrastEnforced = false
+        }
 
         setContent {
             HonorarCraftAndroidTheme {
