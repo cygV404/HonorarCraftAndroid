@@ -74,6 +74,8 @@ fun EntryWindowScreen(
     val invoiceFormat by mainViewModel.invoiceFormat.collectAsState()
     val companyData by mainViewModel.companyData.collectAsState()
     val isLoading by mainViewModel.isLoading.collectAsState()
+    val invoiceYear by mainViewModel.invoiceYear.collectAsState()
+    val invoiceMonth by mainViewModel.invoiceMonth.collectAsState()
 
     EntryWindowContent(
         displayInvoiceNumber = formattedInvoiceNumber,
@@ -82,6 +84,8 @@ fun EntryWindowScreen(
         invoiceWithEntries = currentInvoiceWithEntries,
         companyData = companyData,
         isLoading = isLoading,
+        invoiceYear = invoiceYear,
+        invoiceMonth = invoiceMonth,
         onInvoiceSelect = { mainViewModel.setSelectedInvoiceNumber(it) },
         onGeneratePdf = { context, cd, iwe ->
             mainViewModel.generatePdf(context, cd, iwe)
@@ -102,6 +106,8 @@ fun EntryWindowContent(
     invoiceWithEntries: InvoiceWithEntries?,
     companyData: CompanyData?,
     isLoading: Boolean,
+    invoiceYear: Int,
+    invoiceMonth: Int,
     onInvoiceSelect: (String) -> Unit,
     onGeneratePdf: (android.content.Context, CompanyData, InvoiceWithEntries) -> Unit,
     onDeleteEntries: (List<InvoiceEntry>) -> Unit,
@@ -184,27 +190,6 @@ fun EntryWindowContent(
                         }
                         DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                             allInvoiceNumbers.forEach { num ->
-                                val calendar = Calendar.getInstance()
-                                val year = calendar.get(Calendar.YEAR)
-                                val month = calendar.get(Calendar.MONTH) + 1
-                                val formattedNum = when (invoiceFormat) {
-                                    InvoiceFormat.NUMBER -> {
-                                        val n = num.toIntOrNull()
-                                        if (n != null) String.format(Locale.GERMANY, "%02d", n) else num
-                                    }
-                                    InvoiceFormat.YEAR_NUMBER -> {
-                                        val n = num.toIntOrNull()
-                                        val d = if (n != null) String.format(Locale.GERMANY, "%02d", n) else num
-                                        "$year-$d"
-                                    }
-                                    InvoiceFormat.YEAR_MONTH_NUMBER -> String.format(
-                                        Locale.GERMANY,
-                                        "%d-%02d-%02d",
-                                        year,
-                                        month,
-                                        num.toIntOrNull() ?: 0
-                                    )
-                                }
                                 DropdownMenuItem(
                                     text = {
                                         Box(
@@ -222,7 +207,7 @@ fun EntryWindowContent(
                                                 )
                                         ) {
                                             Text(
-                                                "Rechnung $formattedNum",
+                                                "Rechnung $num",
                                                 modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp)
                                             )
                                         }
@@ -515,6 +500,8 @@ fun EntryWindowPreview() {
             invoiceWithEntries = null,
             companyData = null,
             isLoading = false,
+            invoiceYear = 2026,
+            invoiceMonth = 8,
             onInvoiceSelect = {},
             onGeneratePdf = { _, _, _ -> },
             onDeleteEntries = {},

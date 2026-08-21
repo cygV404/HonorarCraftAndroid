@@ -84,6 +84,8 @@ fun CreateInvoiceScreen(
     val formattedInvoiceNumber by mainViewModel.formattedInvoiceNumber.collectAsState()
     val allInvoiceNumbers by mainViewModel.allInvoiceNumbers.collectAsState()
     val invoiceFormat by mainViewModel.invoiceFormat.collectAsState()
+    val invoiceYear by mainViewModel.invoiceYear.collectAsState()
+    val invoiceMonth by mainViewModel.invoiceMonth.collectAsState()
 
     val datum by mainViewModel.currentDate.collectAsState()
     val stunden by mainViewModel.currentHours.collectAsState()
@@ -97,6 +99,8 @@ fun CreateInvoiceScreen(
         displayInvoiceNumber = formattedInvoiceNumber,
         allInvoiceNumbers = allInvoiceNumbers,
         invoiceFormat = invoiceFormat,
+        invoiceYear = invoiceYear,
+        invoiceMonth = invoiceMonth,
         datum = datum,
         stunden = stunden,
         klasseFach = klasseFach,
@@ -119,6 +123,8 @@ fun CreateInvoiceContent(
     displayInvoiceNumber: String,
     allInvoiceNumbers: List<String>,
     invoiceFormat: InvoiceFormat,
+    invoiceYear: Int,
+    invoiceMonth: Int,
     datum: String,
     stunden: String,
     klasseFach: String,
@@ -196,56 +202,35 @@ fun CreateInvoiceContent(
                             modifier = Modifier.size(32.dp)
                         )
                     }
-                            DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                                allInvoiceNumbers.forEach { num ->
-                                    val calendar = Calendar.getInstance()
-                                    val year = calendar.get(Calendar.YEAR)
-                                    val month = calendar.get(Calendar.MONTH) + 1
-                                    val formattedNum = when (invoiceFormat) {
-                                        InvoiceFormat.NUMBER -> {
-                                            val n = num.toIntOrNull()
-                                            if (n != null) String.format(Locale.GERMANY, "%02d", n) else num
-                                        }
-                                        InvoiceFormat.YEAR_NUMBER -> {
-                                            val n = num.toIntOrNull()
-                                            val d = if (n != null) String.format(Locale.GERMANY, "%02d", n) else num
-                                            "$year-$d"
-                                        }
-                                        InvoiceFormat.YEAR_MONTH_NUMBER -> String.format(
-                                            Locale.GERMANY,
-                                            "%d-%02d-%02d",
-                                            year,
-                                            month,
-                                            num.toIntOrNull() ?: 0
+                    DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                        allInvoiceNumbers.forEach { num ->
+                            DropdownMenuItem(
+                                text = {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .combinedClickable(
+                                                onClick = {
+                                                    showMenu = false
+                                                    onInvoiceSelect(num)
+                                                },
+                                                onLongClick = {
+                                                    showMenu = false
+                                                    invoiceToDelete = num
+                                                }
+                                            )
+                                    ) {
+                                        Text(
+                                            "Rechnung $num",
+                                            modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp)
                                         )
                                     }
-                                    DropdownMenuItem(
-                                        text = {
-                                            Box(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .combinedClickable(
-                                                        onClick = {
-                                                            showMenu = false
-                                                            onInvoiceSelect(num)
-                                                        },
-                                                        onLongClick = {
-                                                            showMenu = false
-                                                            invoiceToDelete = num
-                                                        }
-                                                    )
-                                            ) {
-                                                Text(
-                                                    "Rechnung $formattedNum",
-                                                    modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp)
-                                                )
-                                            }
-                                        },
-                                        onClick = { /* Handled in Box */ },
-                                        contentPadding = PaddingValues(0.dp)
-                                    )
-                                }
-                            }
+                                },
+                                onClick = { /* Handled in Box */ },
+                                contentPadding = PaddingValues(0.dp)
+                            )
+                        }
+                    }
                 }
             },
             colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -513,6 +498,8 @@ fun CreateInvoicePreview() {
             displayInvoiceNumber = "1",
             allInvoiceNumbers = listOf("1", "2"),
             invoiceFormat = InvoiceFormat.NUMBER,
+            invoiceYear = 2024,
+            invoiceMonth = 1,
             datum = "01.01.2024",
             stunden = "2.0",
             klasseFach = "Mathe",

@@ -68,6 +68,17 @@ suspend fun createInvoicePdf(
     val decimalFormat = DecimalFormat("#,##0.00", DecimalFormatSymbols(Locale.GERMANY))
     val today = dateFormatter.format(Date())
 
+    // Prüfen ob Unterschrift vorhanden und ladbar ist
+    val signatureBitmap = if (companyData.signaturePath.isNotBlank()) {
+        try {
+            val file = File(companyData.signaturePath)
+            if (file.exists()) BitmapFactory.decodeFile(companyData.signaturePath) else null
+        } catch (e: Exception) {
+            null
+        }
+    } else null
+    val showSignature = signatureBitmap != null
+
     // --- Seite 1: Deckblatt ---
     var pageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, 1).create()
     var page = pdfDocument.startPage(pageInfo)
@@ -79,19 +90,29 @@ suspend fun createInvoicePdf(
     paintBold.textAlign = Paint.Align.RIGHT
     val rightPos = pageWidth - margin
 
-    canvas.drawText("${companyData.billerFirstName} ${companyData.billerSecondName}", rightPos, y, paintBold)
+    canvas.drawText("${companyData.billerSecondName} ${companyData.billerFirstName}", rightPos, y, paintBold)
     y += 15f
     canvas.drawText("${companyData.billerStreetName} ${companyData.billerStreetNumber}", rightPos, y, paint)
     y += 15f
     canvas.drawText("${companyData.billerPlzNumber} ${companyData.billerCityName}", rightPos, y, paint)
     y += 30f
-    canvas.drawText("Steuernummer: ${companyData.taxNumber}", rightPos, y, paint)
-    y += 15f
-    canvas.drawText("IBAN: ${companyData.billerIban}", rightPos, y, paint)
-    y += 15f
-    canvas.drawText("BIC: ${companyData.billerBIC}", rightPos, y, paint)
-    y += 30f
-    if (companyData.signaturePath.isBlank()) {
+    
+    if (companyData.taxNumber.isNotBlank()) {
+        canvas.drawText("Steuernummer: ${companyData.taxNumber}", rightPos, y, paint)
+        y += 15f
+    }
+    if (companyData.billerIban.isNotBlank()) {
+        canvas.drawText("IBAN: ${companyData.billerIban}", rightPos, y, paint)
+        y += 15f
+    }
+    if (companyData.billerBIC.isNotBlank()) {
+        canvas.drawText("BIC: ${companyData.billerBIC}", rightPos, y, paint)
+        y += 15f
+    }
+    
+    // Datum im Header nur wenn KEINE Unterschrift gezeigt wird
+    if (!showSignature) {
+        y += 15f
         canvas.drawText("Rechnungsdatum: $today", rightPos, y, paint)
     }
 
@@ -106,28 +127,46 @@ suspend fun createInvoicePdf(
     y += 30f
 
     // Empfänger
-    canvas.drawText(companyData.customerSecondNameOrOrga, margin, y, paintBold)
-    y += 15f
+    if (companyData.customerSecondNameOrOrga.isNotBlank()) {
+        canvas.drawText(companyData.customerSecondNameOrOrga, margin, y, paintBold)
+        y += 15f
+    }
     if (companyData.customerFirstName.isNotBlank()) {
         canvas.drawText(companyData.customerFirstName, margin, y, paint)
         y += 15f
     }
+    
+    // Zeige Straße an, falls vorhanden
+    if (companyData.customerStreet.isNotBlank()) {
+        canvas.drawText("${companyData.customerStreet} ${companyData.customerStreetNumber}", margin, y, paint)
+        y += 15f
+    }
+    
+    // Zeige Postfach an, falls vorhanden
     if (companyData.customerMailBox.isNotBlank()) {
         canvas.drawText("Postfach ${companyData.customerMailBox}", margin, y, paint)
-    } else {
-        canvas.drawText("${companyData.customerStreet} ${companyData.customerStreetNumber}", margin, y, paint)
+        y += 15f
     }
-    y += 15f
-    canvas.drawText("${companyData.customerPlz} ${companyData.customerCityName}", margin, y, paint)
-    y += 30f
+    
+    if (companyData.customerPlz.isNotBlank() || companyData.customerCityName.isNotBlank()) {
+        canvas.drawText("${companyData.customerPlz} ${companyData.customerCityName}", margin, y, paint)
+        y += 30f
+    }
 
     // Bildungszentrum Info
-    canvas.drawText("Bildungszentrum: ${companyData.eduCenter}", margin, y, paint)
-    y += 15f
-    canvas.drawText("Standortnummer: ${companyData.locationNr}", margin, y, paint)
-    y += 15f
-    canvas.drawText("Schulart / Maßnahme: ${companyData.schoolType}", margin, y, paint)
-    y += 40f
+    if (companyData.eduCenter.isNotBlank()) {
+        canvas.drawText("Bildungszentrum: ${companyData.eduCenter}", margin, y, paint)
+        y += 15f
+    }
+    if (companyData.locationNr.isNotBlank()) {
+        canvas.drawText("Standortnummer: ${companyData.locationNr}", margin, y, paint)
+        y += 15f
+    }
+    if (companyData.schoolType.isNotBlank()) {
+        canvas.drawText("Schulart / Maßnahme: ${companyData.schoolType}", margin, y, paint)
+        y += 15f
+    }
+    y += 25f
 
     // Zeitraum + Summen
     val sortedEntries = invoiceWithEntries.entries.sortedBy {
@@ -164,19 +203,16 @@ suspend fun createInvoicePdf(
     }
 
     // Unterschrift
-    if (companyData.signaturePath.isNotBlank()) {
+    if (showSignature && signatureBitmap != null) {
         try {
-            val bitmap = BitmapFactory.decodeFile(companyData.signaturePath)
-            if (bitmap != null) {
-                val dstWidth = 150f
-                val dstHeight = 50f
-                canvas.drawBitmap(bitmap, null, android.graphics.RectF(margin, y, margin + dstWidth, y + dstHeight), null)
-                y += 60f
-                canvas.drawLine(margin, y, margin + 200f, y, linePaint)
-                y += 15f
-                canvas.drawText("${companyData.billerCityName}, $today", margin, y, paint)
-                bitmap.recycle()
-            }
+            val dstWidth = 150f
+            val dstHeight = 50f
+            canvas.drawBitmap(signatureBitmap, null, android.graphics.RectF(margin, y, margin + dstWidth, y + dstHeight), null)
+            y += 60f
+            canvas.drawLine(margin, y, margin + 200f, y, linePaint)
+            y += 15f
+            canvas.drawText("${companyData.billerCityName}, $today", margin, y, paint)
+            signatureBitmap.recycle()
         } catch (e: Exception) {
             e.printStackTrace()
         }

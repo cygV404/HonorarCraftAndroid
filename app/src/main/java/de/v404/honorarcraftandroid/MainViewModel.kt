@@ -149,8 +149,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val companyData: StateFlow<CompanyData?> = companyDao.getCompanyData()
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
-    // Current Invoice with Entries - reactive to _selectedInvoiceNumber
-    val currentInvoiceWithEntries: StateFlow<InvoiceWithEntries?> = _selectedInvoiceNumber
+    // Current Invoice with Entries - reactive to formattedInvoiceNumber
+    val currentInvoiceWithEntries: StateFlow<InvoiceWithEntries?> = formattedInvoiceNumber
         .flatMapLatest { number -> invoiceDao.getInvoiceWithEntries(number) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
@@ -212,8 +212,42 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun setSelectedInvoiceNumber(number: String) {
-        _selectedInvoiceNumber.value = number
-        sharedPrefs.edit().putString("selected_invoice_number", number).apply()
+        // Check if it's a composite number like "2026-01-01" or "2026-01"
+        val parts = number.split("-")
+        if (parts.size >= 2) {
+            val yearPart = parts[0].toIntOrNull()
+            val monthOrNumPart = parts[1].toIntOrNull()
+            
+            if (yearPart != null) _invoiceYear.value = yearPart
+            
+            if (parts.size == 3) {
+                // Format: YEAR-MONTH-NUMBER
+                if (monthOrNumPart != null) _invoiceMonth.value = monthOrNumPart
+                val numPart = parts[2].toIntOrNull()
+                val formattedNum = if (numPart != null) String.format(Locale.GERMANY, "%02d", numPart) else parts[2]
+                _selectedInvoiceNumber.value = formattedNum
+            } else if (parts.size == 2 && invoiceFormat.value == InvoiceFormat.YEAR_NUMBER) {
+                // Format: YEAR-NUMBER
+                val numPart = parts[1].toIntOrNull()
+                val formattedNum = if (numPart != null) String.format(Locale.GERMANY, "%02d", numPart) else parts[1]
+                _selectedInvoiceNumber.value = formattedNum
+            } else {
+                // Fallback for simple number or unknown format
+                val numInt = number.toIntOrNull()
+                val formatted = if (numInt != null) String.format(Locale.GERMANY, "%02d", numInt) else number
+                _selectedInvoiceNumber.value = formatted
+            }
+        } else {
+            val numInt = number.toIntOrNull()
+            val formatted = if (numInt != null) String.format(Locale.GERMANY, "%02d", numInt) else number
+            _selectedInvoiceNumber.value = formatted
+        }
+        
+        sharedPrefs.edit().putString("selected_invoice_number", _selectedInvoiceNumber.value).apply()
+        
+        // Reset confirmation card to avoid "ghost" entries from previous invoice
+        _lastAddedEntry.value = null
+        _showEntryConfirmation.value = false
     }
 
     fun setInvoiceFormat(format: InvoiceFormat) {
@@ -254,7 +288,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         if (datum.isBlank() || stunden.isBlank()) return
 
-        val number = _selectedInvoiceNumber.value
+        val number = formattedInvoiceNumber.value
         val hours = stunden.replace(",", ".").toBigDecimalOrNull()
 
         if (hours == null) {
@@ -296,7 +330,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun addEntry(datum: String, stunden: String, klasseFach: String) {
-        val number = _selectedInvoiceNumber.value
+        val number = formattedInvoiceNumber.value
         val hours = stunden.replace(",", ".").toBigDecimalOrNull()
 
         if (hours == null) {
@@ -411,10 +445,10 @@ fun formatInvoice(number: String, format: InvoiceFormat, year: Int, month: Int):
         InvoiceFormat.YEAR_NUMBER -> "$year-$displayNum"
         InvoiceFormat.YEAR_MONTH_NUMBER -> String.format(
             Locale.GERMANY,
-            "%d-%02d-%s",
+            "%d-%02d-%02d",
             year,
             month,
-            displayNum
+            numInt ?: 0
         )
     }
 }
