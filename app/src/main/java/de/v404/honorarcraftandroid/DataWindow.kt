@@ -113,7 +113,7 @@ fun DataWindowContent(
     }
 
     var rateText by remember(savedData) {
-        mutableStateOf(savedData?.rate?.toString()?.replace(".", ",") ?: "")
+        mutableStateOf(companyDataState.rate.toString().replace(".", ","))
     }
 
     var showMenu by remember { mutableStateOf(false) }
@@ -502,7 +502,7 @@ fun DataWindowContent(
                 }
                 item {
                     DataField(
-                        label = "Honorarsatz €",
+                        label = "Honorarsatz € a 45 Minuten",
                         value = rateText,
                         onValueChange = {
                             rateText = it

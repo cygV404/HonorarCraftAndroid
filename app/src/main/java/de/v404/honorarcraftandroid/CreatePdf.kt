@@ -28,6 +28,7 @@ suspend fun createInvoicePdf(
     context: Context,
     invoiceWithEntries: InvoiceWithEntries,
     companyData: CompanyData?,
+    formattedInvoiceNumber: String,
     onFinished: (File?) -> Unit
 ): Boolean = withContext(Dispatchers.IO) {
     if (companyData == null) {
@@ -101,7 +102,7 @@ suspend fun createInvoicePdf(
     canvas.drawText("Honorarabrechnung", margin, y, titlePaint)
     y += 30f
 
-    canvas.drawText("Rechnung: ${invoiceWithEntries.invoice.invoiceNumber}", margin, y, paintBold)
+    canvas.drawText("Rechnung: $formattedInvoiceNumber", margin, y, paintBold)
     y += 30f
 
     // Empfänger
@@ -247,7 +248,7 @@ suspend fun createInvoicePdf(
         pageNumber++
     }
 
-    val fileName = "Rechnung_${invoiceWithEntries.invoice.invoiceNumber}.pdf"
+    val fileName = "Rechnung_$formattedInvoiceNumber.pdf"
     val success = savePdf(context, pdfDocument, fileName, onFinished)
     pdfDocument.close()
     return@withContext success

@@ -87,12 +87,13 @@ fun EntryWindowScreen(
             mainViewModel.generatePdf(context, cd, iwe)
         },
         onDeleteEntries = { mainViewModel.deleteEntries(it) },
+        onDeleteInvoice = { mainViewModel.deleteInvoice(it) },
         selectedTabIndex = selectedTabIndex,
         onTabSelected = onTabSelected
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun EntryWindowContent(
     displayInvoiceNumber: String,
@@ -104,6 +105,7 @@ fun EntryWindowContent(
     onInvoiceSelect: (String) -> Unit,
     onGeneratePdf: (android.content.Context, CompanyData, InvoiceWithEntries) -> Unit,
     onDeleteEntries: (List<InvoiceEntry>) -> Unit,
+    onDeleteInvoice: (String) -> Unit,
     selectedTabIndex: Int,
     onTabSelected: (Int) -> Unit
 ) {
@@ -114,8 +116,32 @@ fun EntryWindowContent(
     var selectedIds by remember { mutableStateOf(setOf<Long>()) }
     val isSelectionMode = selectedIds.isNotEmpty()
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var invoiceToDelete by remember { mutableStateOf<String?>(null) }
 
     val context = LocalContext.current
+
+    if (invoiceToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { invoiceToDelete = null },
+            title = { Text("Rechnung löschen?") },
+            text = { Text("Möchtest du die gesamte Rechnung und alle dazugehörigen Einträge wirklich löschen?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        invoiceToDelete?.let { onDeleteInvoice(it) }
+                        invoiceToDelete = null
+                    }
+                ) {
+                    Text("Löschen", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { invoiceToDelete = null }) {
+                    Text("Abbrechen")
+                }
+            }
+        )
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         if (isSelectionMode) {
@@ -162,22 +188,47 @@ fun EntryWindowContent(
                                 val year = calendar.get(Calendar.YEAR)
                                 val month = calendar.get(Calendar.MONTH) + 1
                                 val formattedNum = when (invoiceFormat) {
-                                    InvoiceFormat.NUMBER -> num
-                                    InvoiceFormat.YEAR_NUMBER -> "$year-$num"
+                                    InvoiceFormat.NUMBER -> {
+                                        val n = num.toIntOrNull()
+                                        if (n != null) String.format(Locale.GERMANY, "%02d", n) else num
+                                    }
+                                    InvoiceFormat.YEAR_NUMBER -> {
+                                        val n = num.toIntOrNull()
+                                        val d = if (n != null) String.format(Locale.GERMANY, "%02d", n) else num
+                                        "$year-$d"
+                                    }
                                     InvoiceFormat.YEAR_MONTH_NUMBER -> String.format(
                                         Locale.GERMANY,
-                                        "%d-%02d-%s",
+                                        "%d-%02d-%02d",
                                         year,
                                         month,
-                                        num
+                                        num.toIntOrNull() ?: 0
                                     )
                                 }
                                 DropdownMenuItem(
-                                    text = { Text("Rechnung $formattedNum") },
-                                    onClick = {
-                                        showMenu = false
-                                        onInvoiceSelect(num)
-                                    }
+                                    text = {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .combinedClickable(
+                                                    onClick = {
+                                                        showMenu = false
+                                                        onInvoiceSelect(num)
+                                                    },
+                                                    onLongClick = {
+                                                        showMenu = false
+                                                        invoiceToDelete = num
+                                                    }
+                                                )
+                                        ) {
+                                            Text(
+                                                "Rechnung $formattedNum",
+                                                modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp)
+                                            )
+                                        }
+                                    },
+                                    onClick = { /* Handled in Box */ },
+                                    contentPadding = PaddingValues(0.dp)
                                 )
                             }
                             HorizontalDivider()
@@ -467,6 +518,7 @@ fun EntryWindowPreview() {
             onInvoiceSelect = {},
             onGeneratePdf = { _, _, _ -> },
             onDeleteEntries = {},
+            onDeleteInvoice = {},
             selectedTabIndex = 2,
             onTabSelected = {}
         )

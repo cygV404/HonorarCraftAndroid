@@ -40,6 +40,9 @@ interface InvoiceDao {
     @Query("DELETE FROM invoice_entries WHERE teachingSubject = :subject")
     suspend fun deleteEntriesBySubject(subject: String)
 
+    @Delete
+    suspend fun deleteInvoice(invoice: InvoiceData)
+
     @Query("SELECT invoiceNumber FROM invoices")
     fun getAllInvoiceNumbers(): Flow<List<String>>
 

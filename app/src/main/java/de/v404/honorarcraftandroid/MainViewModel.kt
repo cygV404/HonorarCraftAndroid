@@ -330,6 +330,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun deleteInvoice(invoiceNumber: String) {
+        viewModelScope.launch {
+            invoiceDao.deleteInvoice(InvoiceData(invoiceNumber))
+            if (_selectedInvoiceNumber.value == invoiceNumber) {
+                setSelectedInvoiceNumber("1")
+            }
+        }
+    }
+
     fun resetAllData() {
         viewModelScope.launch {
             _isLoading.value = true
@@ -383,7 +392,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun generatePdf(context: Context, companyData: CompanyData, invoiceWithEntries: InvoiceWithEntries) {
         viewModelScope.launch {
             setLoading(true)
-            val success = createInvoicePdf(context, invoiceWithEntries, companyData) { _ -> }
+            val formattedNumber = formattedInvoiceNumber.value
+            val success = createInvoicePdf(context, invoiceWithEntries, companyData, formattedNumber) { _ -> }
             if (success) {
                 incrementInvoiceNumber()
             }
@@ -393,15 +403,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 }
 
 fun formatInvoice(number: String, format: InvoiceFormat, year: Int, month: Int): String {
+    val numInt = number.toIntOrNull()
+    val displayNum = if (numInt != null) String.format(Locale.GERMANY, "%02d", numInt) else number
+    
     return when (format) {
-        InvoiceFormat.NUMBER -> number
-        InvoiceFormat.YEAR_NUMBER -> "$year-$number"
+        InvoiceFormat.NUMBER -> displayNum
+        InvoiceFormat.YEAR_NUMBER -> "$year-$displayNum"
         InvoiceFormat.YEAR_MONTH_NUMBER -> String.format(
             Locale.GERMANY,
             "%d-%02d-%s",
             year,
             month,
-            number
+            displayNum
         )
     }
 }

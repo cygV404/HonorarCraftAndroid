@@ -5,8 +5,10 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,6 +29,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.FormatListNumbered
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -102,6 +105,7 @@ fun CreateInvoiceScreen(
         onAddEntry = { mainViewModel.addEntryFromForm() },
         onInvoiceSelect = { mainViewModel.setSelectedInvoiceNumber(it) },
         onDeleteSubjectSuggestion = { mainViewModel.deleteSubjectSuggestion(it) },
+        onDeleteInvoice = { mainViewModel.deleteInvoice(it) },
         selectedTabIndex = selectedTabIndex,
         onTabSelected = onTabSelected,
         lastAddedEntry = lastAddedEntry,
@@ -109,7 +113,7 @@ fun CreateInvoiceScreen(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun CreateInvoiceContent(
     displayInvoiceNumber: String,
@@ -123,6 +127,7 @@ fun CreateInvoiceContent(
     onAddEntry: () -> Unit,
     onInvoiceSelect: (String) -> Unit,
     onDeleteSubjectSuggestion: (String) -> Unit,
+    onDeleteInvoice: (String) -> Unit,
     selectedTabIndex: Int,
     onTabSelected: (Int) -> Unit,
     lastAddedEntry: InvoiceEntry? = null,
@@ -130,7 +135,31 @@ fun CreateInvoiceContent(
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
+    var invoiceToDelete by remember { mutableStateOf<String?>(null) }
     val datePickerState = rememberDatePickerState()
+
+    if (invoiceToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { invoiceToDelete = null },
+            title = { Text("Rechnung löschen?") },
+            text = { Text("Möchtest du die gesamte Rechnung und alle dazugehörigen Einträge wirklich löschen?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        invoiceToDelete?.let { onDeleteInvoice(it) }
+                        invoiceToDelete = null
+                    }
+                ) {
+                    Text("Löschen", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { invoiceToDelete = null }) {
+                    Text("Abbrechen")
+                }
+            }
+        )
+    }
 
     val focusRequesterStunden = remember { FocusRequester() }
     val focusRequesterSubject = remember { FocusRequester() }
@@ -167,31 +196,56 @@ fun CreateInvoiceContent(
                             modifier = Modifier.size(32.dp)
                         )
                     }
-                    DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                        allInvoiceNumbers.forEach { num ->
-                            val calendar = Calendar.getInstance()
-                            val year = calendar.get(Calendar.YEAR)
-                            val month = calendar.get(Calendar.MONTH) + 1
-                            val formattedNum = when (invoiceFormat) {
-                                InvoiceFormat.NUMBER -> num
-                                InvoiceFormat.YEAR_NUMBER -> "$year-$num"
-                                InvoiceFormat.YEAR_MONTH_NUMBER -> String.format(
-                                    Locale.GERMANY,
-                                    "%d-%02d-%s",
-                                    year,
-                                    month,
-                                    num
-                                )
-                            }
-                            DropdownMenuItem(
-                                text = { Text("Rechnung $formattedNum") },
-                                onClick = {
-                                    showMenu = false
-                                    onInvoiceSelect(num)
+                            DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                                allInvoiceNumbers.forEach { num ->
+                                    val calendar = Calendar.getInstance()
+                                    val year = calendar.get(Calendar.YEAR)
+                                    val month = calendar.get(Calendar.MONTH) + 1
+                                    val formattedNum = when (invoiceFormat) {
+                                        InvoiceFormat.NUMBER -> {
+                                            val n = num.toIntOrNull()
+                                            if (n != null) String.format(Locale.GERMANY, "%02d", n) else num
+                                        }
+                                        InvoiceFormat.YEAR_NUMBER -> {
+                                            val n = num.toIntOrNull()
+                                            val d = if (n != null) String.format(Locale.GERMANY, "%02d", n) else num
+                                            "$year-$d"
+                                        }
+                                        InvoiceFormat.YEAR_MONTH_NUMBER -> String.format(
+                                            Locale.GERMANY,
+                                            "%d-%02d-%02d",
+                                            year,
+                                            month,
+                                            num.toIntOrNull() ?: 0
+                                        )
+                                    }
+                                    DropdownMenuItem(
+                                        text = {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .combinedClickable(
+                                                        onClick = {
+                                                            showMenu = false
+                                                            onInvoiceSelect(num)
+                                                        },
+                                                        onLongClick = {
+                                                            showMenu = false
+                                                            invoiceToDelete = num
+                                                        }
+                                                    )
+                                            ) {
+                                                Text(
+                                                    "Rechnung $formattedNum",
+                                                    modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp)
+                                                )
+                                            }
+                                        },
+                                        onClick = { /* Handled in Box */ },
+                                        contentPadding = PaddingValues(0.dp)
+                                    )
                                 }
-                            )
-                        }
-                    }
+                            }
                 }
             },
             colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -467,6 +521,7 @@ fun CreateInvoicePreview() {
             onAddEntry = { },
             onInvoiceSelect = {},
             onDeleteSubjectSuggestion = {},
+            onDeleteInvoice = {},
             selectedTabIndex = 1,
             onTabSelected = {}
         )

@@ -271,14 +271,14 @@ fun DashboardContent(
                     onDecrement = {
                         if (invoiceNumberInt > 0) {
                             val next = invoiceNumberInt - 1
-                            val length = rawInvoiceNumber.length.coerceAtLeast(1)
+                            val length = rawInvoiceNumber.length.coerceAtLeast(2)
                             val formatted = String.format(Locale.GERMANY, "%0${length}d", next)
                             onInvoiceNumberChange(formatted)
                         }
                     },
                     onIncrement = {
                         val next = invoiceNumberInt + 1
-                        val length = rawInvoiceNumber.length.coerceAtLeast(1)
+                        val length = rawInvoiceNumber.length.coerceAtLeast(2)
                         val formatted = String.format(Locale.GERMANY, "%0${length}d", next)
                         onInvoiceNumberChange(formatted)
                     },
