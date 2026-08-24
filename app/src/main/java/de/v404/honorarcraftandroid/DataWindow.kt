@@ -44,7 +44,6 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -75,20 +74,17 @@ fun DataWindowScreen(
     val isLoading by mainViewModel.isLoading.collectAsState()
     val resetTrigger by mainViewModel.resetDataWindowTrigger.collectAsState()
 
-    // key(resetTrigger) sorgt dafür, dass die gesamte Content-Composable neu initialisiert wird,
-    // wenn "Verwerfen" geklickt wird oder die Daten hart zurückgesetzt werden.
-    key(resetTrigger) {
-        DataWindowContent(
-            savedData = savedData,
-            isLoading = isLoading,
-            onSave = { mainViewModel.saveCompanyData(it) },
-            onResetAll = { mainViewModel.resetAllData() },
-            onResetCompanyOnly = { mainViewModel.resetCompanyData() },
-            onChanged = { mainViewModel.setHasUnsavedChanges(true) },
-            selectedTabIndex = selectedTabIndex,
-            onTabSelected = onTabSelected
-        )
-    }
+    DataWindowContent(
+        savedData = savedData,
+        isLoading = isLoading,
+        resetTrigger = resetTrigger,
+        onSave = { mainViewModel.saveCompanyData(it) },
+        onResetAll = { mainViewModel.resetAllData() },
+        onResetCompanyOnly = { mainViewModel.resetCompanyData() },
+        onChanged = { mainViewModel.setHasUnsavedChanges(true) },
+        selectedTabIndex = selectedTabIndex,
+        onTabSelected = onTabSelected
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -96,6 +92,7 @@ fun DataWindowScreen(
 fun DataWindowContent(
     savedData: CompanyData?,
     isLoading: Boolean,
+    resetTrigger: Int,
     onSave: (CompanyData) -> Unit,
     onResetAll: () -> Unit,
     onResetCompanyOnly: () -> Unit,
@@ -106,13 +103,13 @@ fun DataWindowContent(
     val context = LocalContext.current
 
     // Initialisierung des lokalen Zustands mit den Daten aus der Datenbank.
-    // Da diese Composable durch key(resetTrigger) neu erstellt wird, 
-    // greift remember hier jedes Mal neu mit den Originaldaten.
-    var companyDataState by remember(savedData) {
+    // Durch remember(savedData, resetTrigger) greift remember hier jedes Mal neu,
+    // wenn sich die Daten ändern oder ein Reset erzwungen wird.
+    var companyDataState by remember(savedData, resetTrigger) {
         mutableStateOf(savedData?.copy() ?: CompanyData())
     }
 
-    var rateText by remember(savedData) {
+    var rateText by remember(savedData, resetTrigger) {
         mutableStateOf(companyDataState.rate.toString().replace(".", ","))
     }
 
@@ -573,6 +570,7 @@ fun DataWindowPreview() {
         DataWindowContent(
             savedData = CompanyData(),
             isLoading = false,
+            resetTrigger = 0,
             onSave = {},
             onResetAll = {},
             onResetCompanyOnly = {},

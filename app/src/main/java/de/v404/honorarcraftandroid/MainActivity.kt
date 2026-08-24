@@ -70,17 +70,12 @@ fun MainAppContent() {
         }
     }
 
-    // Synchronisiere ViewModel-State mit Pager-State
-    LaunchedEffect(pagerState.currentPage) {
-        if (pagerState.currentPage != selectedTabIndex && pendingTabIndex == null) {
-            mainViewModel.setSelectedTabIndex(pagerState.currentPage)
-        }
-    }
-
-    LaunchedEffect(pendingTabIndex) {
-        if (pendingTabIndex != null && pagerState.currentPage != selectedTabIndex) {
-            pagerState.scrollToPage(selectedTabIndex)
-        }
+    // Synchronisiere ViewModel-State mit Pager-State (nur bei settledPage)
+    LaunchedEffect(pagerState) {
+        androidx.compose.runtime.snapshotFlow { pagerState.settledPage }
+            .collect { settledPage ->
+                mainViewModel.updateTabIndexFromPager(settledPage)
+            }
     }
 
     val tabs = listOf("Übersicht", "Erstellen", "Vorschau", "Daten")
@@ -110,6 +105,8 @@ fun MainAppContent() {
         )
     }
 
+    val hasUnsavedChanges by mainViewModel.hasUnsavedChanges.collectAsState()
+
     Scaffold(
         bottomBar = {
             NavigationBar(
@@ -119,7 +116,7 @@ fun MainAppContent() {
                 tabs.forEachIndexed { index, title ->
                     NavigationBarItem(
                         selected = selectedTabIndex == index,
-                        onClick = { mainViewModel.setSelectedTabIndex(index) },
+                        onClick = { mainViewModel.requestTabChange(index) },
                         icon = { Icon(icons[index], contentDescription = title) },
                         label = { Text(title) }
                     )
@@ -132,26 +129,26 @@ fun MainAppContent() {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(bottom = innerPadding.calculateBottomPadding()),
-            userScrollEnabled = true
+            userScrollEnabled = !hasUnsavedChanges
         ) { page ->
             when (page) {
                 0 -> DashboardScreen(mainViewModel = mainViewModel)
                 1 -> CreateInvoiceScreen(
                     mainViewModel = mainViewModel,
                     selectedTabIndex = selectedTabIndex,
-                    onTabSelected = { mainViewModel.setSelectedTabIndex(it) }
+                    onTabSelected = { mainViewModel.requestTabChange(it) }
                 )
 
                 2 -> EntryWindowScreen(
                     mainViewModel = mainViewModel,
                     selectedTabIndex = selectedTabIndex,
-                    onTabSelected = { mainViewModel.setSelectedTabIndex(it) }
+                    onTabSelected = { mainViewModel.requestTabChange(it) }
                 )
 
                 3 -> DataWindowScreen(
                     mainViewModel = mainViewModel,
                     selectedTabIndex = selectedTabIndex,
-                    onTabSelected = { mainViewModel.setSelectedTabIndex(it) }
+                    onTabSelected = { mainViewModel.requestTabChange(it) }
                 )
             }
         }

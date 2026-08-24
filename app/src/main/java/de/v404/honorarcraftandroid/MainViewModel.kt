@@ -171,7 +171,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _isLoading.value = loading
     }
 
-    fun setSelectedTabIndex(index: Int) {
+    fun requestTabChange(index: Int) {
         if (_hasUnsavedChanges.value && _selectedTabIndex.value == 3 && index != 3) {
             _pendingTabIndex.value = index
         } else {
@@ -180,10 +180,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun updateTabIndexFromPager(index: Int) {
+        if (_selectedTabIndex.value != index) {
+            _selectedTabIndex.value = index
+        }
+    }
+
     fun confirmTabChange() {
         _pendingTabIndex.value?.let { target ->
-            _resetDataWindowTrigger.value += 1
             _hasUnsavedChanges.value = false
+            _resetDataWindowTrigger.value += 1
             _selectedTabIndex.value = target
             _pendingTabIndex.value = null
         }
