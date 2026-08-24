@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.exclude
@@ -32,10 +33,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.viewmodel.compose.viewModel
 import de.v404.honorarcraftandroid.ui.theme.HonorarCraftAndroidTheme
+
+enum class PagerNavigationMode {
+    IDLE,
+    USER_DRIVEN,
+    PROGRAMMATIC
+}
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -64,28 +74,52 @@ fun MainAppContent() {
         pageCount = { 4 }
     )
 
-    // Zentraler Navigations-Wächter (Convergence Controller)
-    // Stellt sicher, dass der Pager physisch das Ziel erreicht, das das ViewModel vorgibt.
-    LaunchedEffect(selectedTabIndex, pagerState) {
+    val isDragged by pagerState.interactionSource.collectIsDraggedAsState()
+    var navigationMode by remember { mutableStateOf(PagerNavigationMode.IDLE) }
+
+    // User-Interaktion (Wischen) hat immer Priorität und übernimmt die Authority
+    LaunchedEffect(isDragged) {
+        if (isDragged) {
+            navigationMode = PagerNavigationMode.USER_DRIVEN
+        }
+    }
+
+    // Erkennung eines programmatischen Wechsels (Tap in NavigationBar)
+    LaunchedEffect(selectedTabIndex) {
+        // Wenn sich der Index ändert, während wir nicht wischen, ist es ein programmatischer Intent
+        if (!isDragged && navigationMode != PagerNavigationMode.USER_DRIVEN) {
+            navigationMode = PagerNavigationMode.PROGRAMMATIC
+        }
+    }
+
+    // Zentraler Navigations-Wächter (Convergence Controller mit State-Machine)
+    LaunchedEffect(selectedTabIndex, pagerState, navigationMode, isDragged) {
         androidx.compose.runtime.snapshotFlow { pagerState.isScrollInProgress }
             .collect { inProgress ->
-                // Nur agieren, wenn gerade keine aktive (manuelle) Interaktion stattfindet
-                if (!inProgress) {
-                    val physicallyAtTarget = pagerState.settledPage == selectedTabIndex &&
-                            pagerState.currentPageOffsetFraction == 0f
-
-                    if (!physicallyAtTarget) {
-                        // Der Pager ist entweder zwischen Seiten hängen geblieben (z.B. Abbruch durch Touch)
-                        // oder das ViewModel verlangt ein neues Ziel.
-                        try {
-                            pagerState.animateScrollToPage(selectedTabIndex)
-                        } catch (e: Exception) {
-                            // Abbruch ist okay, die State-Machine prüft beim nächsten Idle-Zustand erneut.
+                // Nur agieren, wenn gerade keine aktive physische Bewegung (Wischen/Settling) stattfindet
+                if (!inProgress && !isDragged) {
+                    when (navigationMode) {
+                        PagerNavigationMode.USER_DRIVEN -> {
+                            // User-Swipe abgeschlossen -> Intent ins ViewModel übernehmen
+                            mainViewModel.updateTabIndexFromPager(pagerState.settledPage)
+                            navigationMode = PagerNavigationMode.IDLE
                         }
-                    } else {
-                        // Wir sind am Ziel. ViewModel über den tatsächlichen Stand informieren.
-                        // (Wichtig für manuelle Swipes, falls diese erlaubt sind).
-                        mainViewModel.updateTabIndexFromPager(pagerState.settledPage)
+
+                        PagerNavigationMode.PROGRAMMATIC, PagerNavigationMode.IDLE -> {
+                            // Programmatisches Ziel oder allgemeiner Ghost-Layer-Check
+                            val physicallyAtTarget = pagerState.settledPage == selectedTabIndex &&
+                                    pagerState.currentPageOffsetFraction == 0f
+
+                            if (!physicallyAtTarget) {
+                                try {
+                                    pagerState.animateScrollToPage(selectedTabIndex)
+                                } catch (e: Exception) {
+                                    // Abbruch okay, Loop prüft beim nächsten Stillstand erneut
+                                }
+                            } else {
+                                navigationMode = PagerNavigationMode.IDLE
+                            }
+                        }
                     }
                 }
             }
