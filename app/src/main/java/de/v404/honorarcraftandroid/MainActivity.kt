@@ -64,18 +64,30 @@ fun MainAppContent() {
         pageCount = { 4 }
     )
 
-    // Synchronisiere Pager-State mit ViewModel-State
-    LaunchedEffect(selectedTabIndex) {
-        if (pagerState.currentPage != selectedTabIndex) {
-            pagerState.animateScrollToPage(selectedTabIndex)
-        }
-    }
+    // Zentraler Navigations-Wächter (Convergence Controller)
+    // Stellt sicher, dass der Pager physisch das Ziel erreicht, das das ViewModel vorgibt.
+    LaunchedEffect(selectedTabIndex, pagerState) {
+        androidx.compose.runtime.snapshotFlow { pagerState.isScrollInProgress }
+            .collect { inProgress ->
+                // Nur agieren, wenn gerade keine aktive (manuelle) Interaktion stattfindet
+                if (!inProgress) {
+                    val physicallyAtTarget = pagerState.settledPage == selectedTabIndex &&
+                            pagerState.currentPageOffsetFraction == 0f
 
-    // Synchronisiere ViewModel-State mit Pager-State (nur bei settledPage)
-    LaunchedEffect(pagerState) {
-        androidx.compose.runtime.snapshotFlow { pagerState.settledPage }
-            .collect { settledPage ->
-                mainViewModel.updateTabIndexFromPager(settledPage)
+                    if (!physicallyAtTarget) {
+                        // Der Pager ist entweder zwischen Seiten hängen geblieben (z.B. Abbruch durch Touch)
+                        // oder das ViewModel verlangt ein neues Ziel.
+                        try {
+                            pagerState.animateScrollToPage(selectedTabIndex)
+                        } catch (e: Exception) {
+                            // Abbruch ist okay, die State-Machine prüft beim nächsten Idle-Zustand erneut.
+                        }
+                    } else {
+                        // Wir sind am Ziel. ViewModel über den tatsächlichen Stand informieren.
+                        // (Wichtig für manuelle Swipes, falls diese erlaubt sind).
+                        mainViewModel.updateTabIndexFromPager(pagerState.settledPage)
+                    }
+                }
             }
     }
 
