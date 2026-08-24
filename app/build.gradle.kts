@@ -15,7 +15,7 @@ if (localPropertiesFile.exists()) {
 
 android {
     namespace = "de.v404.honorarcraftandroid"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "de.v404.honorarcraft"
@@ -69,8 +69,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose)
 
-    // Explicitly using a newer BOM for better alpha support
-    implementation(platform("androidx.compose:compose-bom:2025.02.00"))
+    // Use version catalog for Compose BOM
+    implementation(platform(libs.androidx.compose.bom))
 
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")

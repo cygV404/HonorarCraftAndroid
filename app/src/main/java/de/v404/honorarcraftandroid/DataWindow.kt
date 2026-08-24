@@ -215,7 +215,7 @@ fun DataWindowContent(
         )
     }
 
-    Column(modifier = Modifier.fillMaxSize().imePadding()) {
+    Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
             title = { Text("Daten", maxLines = 1, overflow = TextOverflow.Ellipsis) },
             colors = TopAppBarDefaults.topAppBarColors(
@@ -252,6 +252,7 @@ fun DataWindowContent(
 
         Box(modifier = Modifier
             .weight(1f)
+            .imePadding()
             .background(MaterialTheme.colorScheme.background)) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),

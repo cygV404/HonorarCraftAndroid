@@ -239,7 +239,9 @@ fun CreateInvoiceContent(
             )
         )
 
-        Box(modifier = Modifier.weight(1f)) {
+        Box(modifier = Modifier
+            .weight(1f)
+            .imePadding()) {
             // Main content area with background and centered form
             Box(
                 modifier = Modifier
@@ -252,8 +254,7 @@ fun CreateInvoiceContent(
                         .width(380.dp)
                         .padding(horizontal = 16.dp)
                         .align(Alignment.Center)
-                        .verticalScroll(rememberScrollState())
-                        .imePadding(),
+                        .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {

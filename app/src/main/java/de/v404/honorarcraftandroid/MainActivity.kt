@@ -4,8 +4,14 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
@@ -38,11 +44,6 @@ class MainActivity : ComponentActivity() {
 
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        
-        // Deaktiviert den erzwungenen Kontrast der Navigationsleiste für echte Edge-to-Edge Anzeige
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-            window.isNavigationBarContrastEnforced = false
-        }
 
         setContent {
             HonorarCraftAndroidTheme {
@@ -122,13 +123,17 @@ fun MainAppContent() {
                     )
                 }
             }
-        }
+        },
+        contentWindowInsets = WindowInsets.safeDrawing
+            .exclude(WindowInsets.statusBars)
+            .exclude(WindowInsets.ime)
     ) { innerPadding ->
         HorizontalPager(
             state = pagerState,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = innerPadding.calculateBottomPadding()),
+                .padding(innerPadding)
+                .consumeWindowInsets(innerPadding),
             userScrollEnabled = !hasUnsavedChanges
         ) { page ->
             when (page) {
