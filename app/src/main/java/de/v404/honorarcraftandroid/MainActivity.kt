@@ -40,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.viewmodel.compose.viewModel
 import de.v404.honorarcraftandroid.ui.theme.HonorarCraftAndroidTheme
+import kotlinx.coroutines.CancellationException
 
 enum class PagerNavigationMode {
     IDLE,
@@ -93,7 +94,7 @@ fun MainAppContent() {
     }
 
     // Zentraler Navigations-Wächter (Convergence Controller mit State-Machine)
-    LaunchedEffect(selectedTabIndex, pagerState, navigationMode, isDragged) {
+    LaunchedEffect(selectedTabIndex, pagerState, isDragged) {
         androidx.compose.runtime.snapshotFlow { pagerState.isScrollInProgress }
             .collect { inProgress ->
                 // Nur agieren, wenn gerade keine aktive physische Bewegung (Wischen/Settling) stattfindet
@@ -113,8 +114,10 @@ fun MainAppContent() {
                             if (!physicallyAtTarget) {
                                 try {
                                     pagerState.animateScrollToPage(selectedTabIndex)
+                                } catch (e: CancellationException) {
+                                    throw e
                                 } catch (e: Exception) {
-                                    // Abbruch okay, Loop prüft beim nächsten Stillstand erneut
+                                    // Sonstiger Abbruch okay, Loop prüft beim nächsten Stillstand erneut
                                 }
                             } else {
                                 navigationMode = PagerNavigationMode.IDLE
