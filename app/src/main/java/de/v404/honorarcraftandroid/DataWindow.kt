@@ -47,6 +47,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -62,6 +63,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.rememberAsyncImagePainter
 import de.v404.honorarcraftandroid.ui.theme.HonorarCraftAndroidTheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 
@@ -118,25 +122,30 @@ fun DataWindowContent(
     var showResetAllDialog by remember { mutableStateOf(false) }
     var showResetCompanyDialog by remember { mutableStateOf(false) }
 
+    val scope = rememberCoroutineScope()
+
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        uri?.let {
-            try {
-                val inputStream = context.contentResolver.openInputStream(it)
-                if (inputStream == null) {
-                    Toast.makeText(context, "Datei konnte nicht geöffnet werden", Toast.LENGTH_SHORT).show()
-                    return@let
-                }
-                val file = File(context.filesDir, "signature.png")
-                FileOutputStream(file).use { output ->
-                    inputStream.use { input ->
-                        input.copyTo(output)
+        uri ?: return@rememberLauncherForActivityResult
+        scope.launch {
+            // Kopieren gehoert nicht auf den Main Thread: bei einem grossen Bild -
+            // besonders von einem Cloud-Provider, der den Stream erst herunterlaedt -
+            // friert die UI sonst ein und Android loest einen ANR aus.
+            val ziel = withContext(Dispatchers.IO) {
+                runCatching {
+                    val file = File(context.filesDir, "signature.png")
+                    context.contentResolver.openInputStream(uri).use { input ->
+                        checkNotNull(input) { "Stream konnte nicht geoeffnet werden" }
+                        FileOutputStream(file).use { output -> input.copyTo(output) }
                     }
+                    file.absolutePath
                 }
-                companyDataState = companyDataState.copy(signaturePath = file.absolutePath)
+            }
+            ziel.onSuccess { pfad ->
+                companyDataState = companyDataState.copy(signaturePath = pfad)
                 onChanged()
-            } catch (e: Exception) {
+            }.onFailure { e ->
                 Log.e("DataWindow", "Signatur konnte nicht kopiert werden", e)
                 Toast.makeText(context, "Fehler beim Kopieren der Signatur", Toast.LENGTH_SHORT).show()
             }
@@ -425,7 +434,7 @@ fun DataWindowContent(
                                     MaterialTheme.shapes.extraSmall
                                 )
                                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                                .clickable { launcher.launch("image/png") },
+                                .clickable { launcher.launch("image/*") },
                             contentAlignment = Alignment.Center
                         ) {
                             if (companyDataState.signaturePath.isNotEmpty() && File(companyDataState.signaturePath).exists()) {

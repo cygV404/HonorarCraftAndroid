@@ -75,6 +75,13 @@ import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
 
+/**
+ * Zulaessige Zwischenstaende im Stundenfeld: bis zu vier Vorkommastellen und
+ * hoechstens zwei Nachkommastellen, Komma oder Punkt als Trenner. Bewusst auch
+ * unvollstaendige Eingaben wie "2," erlaubt, damit man weitertippen kann.
+ */
+private val HOURS_PATTERN = Regex("""^\d{0,4}([.,]\d{0,2})?$""")
+
 @Composable
 fun CreateInvoiceScreen(
     mainViewModel: MainViewModel,
@@ -284,7 +291,15 @@ fun CreateInvoiceContent(
                     }
                     OutlinedTextField(
                         value = stunden,
-                        onValueChange = { onUpdateForm(null, it, null) },
+                        onValueChange = { eingabe ->
+                            // KeyboardType.Number ist nur ein Hinweis an die Tastatur,
+                            // kein Filter: ueber Einfuegen, Spracheingabe oder eine
+                            // andere Tastatur landet sonst beliebiger Text im Feld und
+                            // die App meldet spaeter nur "Ungültige Stundenzahl".
+                            if (eingabe.isEmpty() || eingabe.matches(HOURS_PATTERN)) {
+                                onUpdateForm(null, eingabe, null)
+                            }
+                        },
                         label = { Text("Stunden") },
                         modifier = Modifier
                             .fillMaxWidth()

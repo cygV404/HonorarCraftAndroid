@@ -21,8 +21,8 @@ android {
         applicationId = "de.v404.honorarcraft"
         minSdk = 24
         targetSdk = 36
-        versionCode = 4  // must be changed at new release
-        versionName = "1.4"
+        versionCode = 5  // must be changed at new release
+        versionName = "1.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
