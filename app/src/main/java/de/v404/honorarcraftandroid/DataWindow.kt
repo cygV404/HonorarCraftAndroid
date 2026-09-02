@@ -1,5 +1,7 @@
 package de.v404.honorarcraftandroid
 
+import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.util.Log
 import android.widget.Toast
@@ -25,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
@@ -34,6 +37,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -75,6 +79,7 @@ fun DataWindowScreen(
     selectedTabIndex: Int,
     onTabSelected: (Int) -> Unit
 ) {
+    val context = LocalContext.current
     val savedData by mainViewModel.companyData.collectAsState()
     val isLoading by mainViewModel.isLoading.collectAsState()
     val resetTrigger by mainViewModel.resetDataWindowTrigger.collectAsState()
@@ -87,9 +92,36 @@ fun DataWindowScreen(
         onResetAll = { mainViewModel.resetAllData() },
         onResetCompanyOnly = { mainViewModel.resetCompanyData() },
         onChanged = { mainViewModel.setHasUnsavedChanges(true) },
+        onExport = { uri -> mainViewModel.exportData(uri) },
+        onImport = { uri ->
+            mainViewModel.importData(uri) { starteAppNeu(context) }
+        },
         selectedTabIndex = selectedTabIndex,
         onTabSelected = onTabSelected
     )
+}
+
+/**
+ * Startet den Prozess neu.
+ *
+ * Nach einem Import haengen alle Room-Flows an der geschlossenen Verbindung;
+ * ein blosses `recreate()` der Activity reicht nicht, weil das ViewModel es
+ * ueberlebt. Deshalb der harte Weg ueber einen Neustart der Launcher-Activity.
+ */
+private fun starteAppNeu(context: Context) {
+    val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+    if (intent != null) {
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK)
+        runCatching { context.startActivity(intent) }
+            .onFailure { Log.e("DataWindow", "Neustart-Intent konnte nicht gestartet werden", it) }
+    } else {
+        Log.e("DataWindow", "Kein Launch-Intent gefunden")
+    }
+    // Prozess in jedem Fall beenden. Weiterlaufen waere die schlechteste Option:
+    // die Room-Verbindung ist geschlossen, die App wuerde nur noch leere Listen
+    // zeigen. Startet der Intent nicht, oeffnet der Nutzer die App eben selbst -
+    // die eingelesenen Daten sind dann trotzdem da.
+    Runtime.getRuntime().exit(0)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -102,6 +134,8 @@ fun DataWindowContent(
     onResetAll: () -> Unit,
     onResetCompanyOnly: () -> Unit,
     onChanged: () -> Unit,
+    onExport: (Uri) -> Unit,
+    onImport: (Uri) -> Unit,
     selectedTabIndex: Int,
     onTabSelected: (Int) -> Unit
 ) {
@@ -123,6 +157,52 @@ fun DataWindowContent(
     var showResetCompanyDialog by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
+
+    // Sicherung schreiben: der Nutzer waehlt den Zielort selbst, damit die Datei
+    // ausserhalb der App liegt und eine Deinstallation sie nicht mitnimmt.
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument(Backup.MIME_TYPE)
+    ) { uri -> uri?.let(onExport) }
+
+    // Vor dem Einlesen wird nachgefragt - der Vorgang ersetzt alles Vorhandene.
+    var importQuelle by remember { mutableStateOf<Uri?>(null) }
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri -> importQuelle = uri }
+
+    importQuelle?.let { quelle ->
+        AlertDialog(
+            onDismissRequest = { importQuelle = null },
+            icon = {
+                Icon(
+                    Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error
+                )
+            },
+            title = { Text("Sicherung einlesen") },
+            text = {
+                Text(
+                    "Alle aktuellen Rechnungen, Positionen und Firmendaten werden durch " +
+                        "die Sicherung ersetzt. Das lässt sich nicht rückgängig machen.\n\n" +
+                        "Die App startet danach neu."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        importQuelle = null
+                        onImport(quelle)
+                    }
+                ) {
+                    Text("Ersetzen", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { importQuelle = null }) { Text("Abbrechen") }
+            }
+        )
+    }
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -240,6 +320,23 @@ fun DataWindowContent(
                     expanded = showMenu,
                     onDismissRequest = { showMenu = false }
                 ) {
+                    DropdownMenuItem(
+                        text = { Text("Daten sichern") },
+                        leadingIcon = { Icon(Icons.Default.Save, contentDescription = null) },
+                        onClick = {
+                            showMenu = false
+                            exportLauncher.launch(Backup.suggestedFileName())
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Sicherung einlesen") },
+                        leadingIcon = { Icon(Icons.Default.Restore, contentDescription = null) },
+                        onClick = {
+                            showMenu = false
+                            importLauncher.launch(arrayOf("*/*"))
+                        }
+                    )
+                    HorizontalDivider()
                     DropdownMenuItem(
                         text = { Text("Datenfelder leeren") },
                         leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) },
@@ -586,6 +683,8 @@ fun DataWindowPreview() {
             onResetAll = {},
             onResetCompanyOnly = {},
             onChanged = {},
+            onExport = {},
+            onImport = {},
             selectedTabIndex = 3,
             onTabSelected = {}
         )

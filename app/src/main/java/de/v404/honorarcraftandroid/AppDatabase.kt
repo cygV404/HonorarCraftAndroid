@@ -81,6 +81,13 @@ interface CompanyDao {
     fun getCompanyData(): Flow<CompanyData?>
 }
 
+/**
+ * Aktuelle Schemaversion. Einzige Quelle der Wahrheit – [Backup] prueft eingelesene
+ * Sicherungen dagegen, damit eine Datei aus einer neueren App-Version nicht zu
+ * einem Absturz beim Start fuehrt.
+ */
+const val DATABASE_VERSION = 11
+
 @Database(
     entities = [
         InvoiceData::class,
@@ -88,7 +95,7 @@ interface CompanyDao {
         CompanyData::class,
         HiddenSubject::class,
     ],
-    version = 11,
+    version = DATABASE_VERSION,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -113,6 +120,21 @@ abstract class AppDatabase : RoomDatabase() {
                     .build()
                 INSTANCE = instance
                 instance
+            }
+        }
+
+        /**
+         * Schliesst die Datenbank und gibt die Instanz frei.
+         *
+         * Wird vom Import in [Backup] gebraucht: solange die Verbindung offen ist,
+         * darf die Datei darunter nicht ausgetauscht werden. Nach dem Aufruf muss
+         * die App neu gestartet werden, weil die bestehenden Flows an der
+         * geschlossenen Verbindung haengen.
+         */
+        fun closeInstance() {
+            synchronized(this) {
+                INSTANCE?.close()
+                INSTANCE = null
             }
         }
     }

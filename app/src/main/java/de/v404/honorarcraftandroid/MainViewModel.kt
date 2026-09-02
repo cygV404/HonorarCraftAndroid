@@ -2,6 +2,7 @@ package de.v404.honorarcraftandroid
 
 import android.app.Application
 import android.content.Context
+import android.net.Uri
 import android.util.Log
 import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
@@ -412,6 +413,57 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
             } finally {
                 _isLoading.value = false
+            }
+        }
+    }
+
+    /** Schreibt die Datenbank in die vom Nutzer gewaehlte Datei. */
+    fun exportData(uri: Uri) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            val ergebnis = Backup.export(getApplication(), uri)
+            _isLoading.value = false
+            ergebnis.onSuccess {
+                Toast.makeText(getApplication(), "Sicherung gespeichert", Toast.LENGTH_LONG).show()
+            }.onFailure {
+                Toast.makeText(
+                    getApplication(),
+                    "Sicherung fehlgeschlagen: ${it.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+
+    /**
+     * Ersetzt die Datenbank durch eine Sicherung und startet die App neu.
+     *
+     * Der Neustart ist nicht Bequemlichkeit, sondern notwendig: saemtliche
+     * StateFlows haengen an der Room-Verbindung, die der Import schliesst. Ein
+     * Weiterlaufen ohne Neustart wuerde leere oder veraltete Listen zeigen.
+     */
+    fun importData(uri: Uri, onRestart: () -> Unit) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            val ergebnis = Backup.import(getApplication(), uri)
+            _isLoading.value = false
+            ergebnis.onSuccess {
+                Toast.makeText(
+                    getApplication(),
+                    "Sicherung eingelesen – App wird neu gestartet",
+                    Toast.LENGTH_LONG
+                ).show()
+                onRestart()
+            }.onFailure { fehler ->
+                Toast.makeText(
+                    getApplication(),
+                    fehler.message ?: "Import fehlgeschlagen",
+                    Toast.LENGTH_LONG
+                ).show()
+                // Scheiterte der Tausch erst nach dem Schliessen der Verbindung,
+                // sind die Daten zwar heil, die laufende App aber nicht mehr
+                // benutzbar - also ebenfalls neu starten.
+                if (fehler is NeustartNoetigException) onRestart()
             }
         }
     }
