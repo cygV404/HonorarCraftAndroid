@@ -2,6 +2,7 @@ package de.v404.honorarcraftandroid
 
 import android.app.Application
 import android.content.Context
+import android.util.Log
 import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -26,6 +27,8 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+
+private const val TAG = "MainViewModel"
 
 enum class InvoiceFormat {
     NUMBER,
@@ -281,9 +284,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun deleteSubjectSuggestion(subject: String) {
+    /**
+     * Blendet einen Fachvorschlag aus der Vorschlagsliste aus.
+     *
+     * Löscht bewusst keine Rechnungspositionen: der Vorschlag verschwindet, die
+     * gebuchten Belege bleiben. Wird das Fach später wieder gebucht, taucht der
+     * Vorschlag automatisch wieder auf (siehe [addEntryFromForm]).
+     */
+    fun hideSubjectSuggestion(subject: String) {
         viewModelScope.launch {
-            invoiceDao.deleteEntriesBySubject(subject)
+            invoiceDao.hideSubject(HiddenSubject(subject))
         }
     }
 
@@ -319,6 +329,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 rate = rate
             )
             invoiceDao.insertEntry(entry)
+            // Wer ein Fach wieder bucht, will es auch wieder vorgeschlagen bekommen.
+            if (klasseFach.isNotBlank()) invoiceDao.unhideSubject(klasseFach)
 
             confirmationJob?.cancel()
             _lastAddedEntry.value = entry
@@ -332,35 +344,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 delay(4500)  // Delay für 4.5 Sekunden
                 _showEntryConfirmation.value = false
             }
-        }
-    }
-
-    fun addEntry(datum: String, stunden: String, klasseFach: String) {
-        val number = formattedInvoiceNumber.value
-        val hours = stunden.replace(",", ".").toBigDecimalOrNull()
-
-        if (hours == null) {
-            Toast.makeText(getApplication(), "Ungültige Stundenzahl", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        viewModelScope.launch {
-            val existingInvoice = invoiceDao.getInvoice(number)
-            val cd = companyDao.getCompanyData().first()
-            val rate = cd?.rate ?: Constants.DEFAULT_RATE
-
-            if (existingInvoice == null) {
-                invoiceDao.insertInvoice(InvoiceData(invoiceNumber = number))
-            }
-
-            val entry = InvoiceEntry(
-                invoiceNumber = number,
-                date = datum,
-                lessonUnits = hours,
-                teachingSubject = klasseFach,
-                rate = rate
-            )
-            invoiceDao.insertEntry(entry)
         }
     }
 
@@ -399,7 +382,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 _hasUnsavedChanges.value = false
                 _resetDataWindowTrigger.value += 1
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e(TAG, "Zurücksetzen fehlgeschlagen", e)
                 withContext(Dispatchers.Main) {
                     Toast.makeText(getApplication(), "Fehler beim Zurücksetzen: ${e.message}", Toast.LENGTH_LONG).show()
                 }
@@ -419,7 +402,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 _hasUnsavedChanges.value = false
                 _resetDataWindowTrigger.value += 1
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e(TAG, "Zurücksetzen fehlgeschlagen", e)
                 withContext(Dispatchers.Main) {
                     Toast.makeText(getApplication(), "Fehler beim Zurücksetzen: ${e.message}", Toast.LENGTH_LONG).show()
                 }
@@ -432,12 +415,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun generatePdf(context: Context, companyData: CompanyData, invoiceWithEntries: InvoiceWithEntries) {
         viewModelScope.launch {
             setLoading(true)
-            val formattedNumber = formattedInvoiceNumber.value
-            val success = createInvoicePdf(context, invoiceWithEntries, companyData, formattedNumber) { _ -> }
-            if (success) {
-                incrementInvoiceNumber()
+            try {
+                val formattedNumber = formattedInvoiceNumber.value
+                val success =
+                    createInvoicePdf(context, invoiceWithEntries, companyData, formattedNumber) { _ -> }
+                if (success) {
+                    incrementInvoiceNumber()
+                }
+            } catch (t: Throwable) {
+                // Fängt bewusst auch Error (z. B. OutOfMemoryError beim Zeichnen):
+                // eine ungefangene Exception in viewModelScope beendet sonst den Prozess.
+                Log.e(TAG, "PDF-Erzeugung fehlgeschlagen", t)
+                Toast.makeText(
+                    getApplication(),
+                    "PDF konnte nicht erstellt werden",
+                    Toast.LENGTH_LONG
+                ).show()
+            } finally {
+                setLoading(false)
             }
-            setLoading(false)
         }
     }
 }

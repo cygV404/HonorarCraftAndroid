@@ -34,11 +34,24 @@ interface InvoiceDao {
     @Query("SELECT * FROM invoices WHERE invoiceNumber = :invoiceNumber")
     fun getInvoiceWithEntries(invoiceNumber: String): Flow<InvoiceWithEntries?>
 
-    @Query("SELECT teachingSubject FROM invoice_entries WHERE teachingSubject != '' GROUP BY teachingSubject ORDER BY COUNT(*) DESC")
+    @Query(
+        """
+        SELECT teachingSubject FROM invoice_entries
+         WHERE teachingSubject != ''
+           AND teachingSubject NOT IN (SELECT name FROM hidden_subjects)
+         GROUP BY teachingSubject
+         ORDER BY COUNT(*) DESC
+        """
+    )
     fun getUniqueSubjects(): Flow<List<String>>
 
-    @Query("DELETE FROM invoice_entries WHERE teachingSubject = :subject")
-    suspend fun deleteEntriesBySubject(subject: String)
+    /** Blendet einen Fachvorschlag aus. Rührt die Rechnungspositionen nicht an. */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun hideSubject(subject: HiddenSubject)
+
+    /** Holt einen ausgeblendeten Vorschlag zurück, sobald das Fach wieder gebucht wird. */
+    @Query("DELETE FROM hidden_subjects WHERE name = :subject")
+    suspend fun unhideSubject(subject: String)
 
     @Delete
     suspend fun deleteInvoice(invoice: InvoiceData)
@@ -69,8 +82,13 @@ interface CompanyDao {
 }
 
 @Database(
-    entities = [InvoiceData::class, InvoiceEntry::class, CompanyData::class],
-    version = 9,
+    entities = [
+        InvoiceData::class,
+        InvoiceEntry::class,
+        CompanyData::class,
+        HiddenSubject::class,
+    ],
+    version = 10,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -89,7 +107,9 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "honorarcraft_database"
                 )
-                    .fallbackToDestructiveMigration(dropAllTables = true)
+                    // Kein fallbackToDestructiveMigration: ein fehlender Migrationspfad
+                    // muss beim Start auffallen, statt still die Rechnungen zu löschen.
+                    .addMigrations(*ALL_MIGRATIONS)
                     .build()
                 INSTANCE = instance
                 instance

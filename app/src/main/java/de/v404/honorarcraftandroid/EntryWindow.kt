@@ -1,6 +1,11 @@
 package de.v404.honorarcraftandroid
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -54,12 +59,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import de.v404.honorarcraftandroid.ui.theme.HonorarCraftAndroidTheme
-import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.text.SimpleDateFormat
-import java.util.Calendar
 import java.util.Locale
 
 @Composable
@@ -125,6 +129,45 @@ fun EntryWindowContent(
     var invoiceToDelete by remember { mutableStateOf<String?>(null) }
 
     val context = LocalContext.current
+
+    // Vor Android 10 landet die PDF ueber die Legacy-API im oeffentlichen
+    // Dokumente-Ordner und braucht dafuer WRITE_EXTERNAL_STORAGE zur Laufzeit.
+    // Ab Android 10 uebernimmt der MediaStore, dort ist keine Berechtigung noetig.
+    val needsStoragePermission = Build.VERSION.SDK_INT < Build.VERSION_CODES.Q
+
+    fun startPdfGeneration() {
+        if (companyData != null && invoiceWithEntries != null) {
+            onGeneratePdf(context, companyData, invoiceWithEntries)
+        } else {
+            Toast.makeText(context, "Daten unvollstaendig", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    val storagePermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            startPdfGeneration()
+        } else {
+            Toast.makeText(
+                context,
+                "Ohne Speicherberechtigung kann die PDF nicht abgelegt werden.",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
+    fun requestPdfGeneration() {
+        val granted = !needsStoragePermission || ContextCompat.checkSelfPermission(
+            context, Manifest.permission.WRITE_EXTERNAL_STORAGE
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (granted) {
+            startPdfGeneration()
+        } else {
+            storagePermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        }
+    }
 
     if (invoiceToDelete != null) {
         AlertDialog(
@@ -329,16 +372,7 @@ fun EntryWindowContent(
 
             if (!isSelectionMode) {
                 FloatingActionButton(
-                    onClick = {
-                        if (!isLoading) {
-                            if (companyData != null && invoiceWithEntries != null) {
-                                onGeneratePdf(context, companyData, invoiceWithEntries)
-                            } else {
-                                Toast.makeText(context, "Daten unvollständig", Toast.LENGTH_SHORT)
-                                    .show()
-                            }
-                        }
-                    },
+                    onClick = { if (!isLoading) requestPdfGeneration() },
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .padding(16.dp),

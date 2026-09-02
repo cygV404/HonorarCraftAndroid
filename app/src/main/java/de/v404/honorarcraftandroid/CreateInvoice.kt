@@ -108,7 +108,7 @@ fun CreateInvoiceScreen(
         onUpdateForm = { d, s, kf -> mainViewModel.updateInvoiceForm(d, s, kf) },
         onAddEntry = { mainViewModel.addEntryFromForm() },
         onInvoiceSelect = { mainViewModel.setSelectedInvoiceNumber(it) },
-        onDeleteSubjectSuggestion = { mainViewModel.deleteSubjectSuggestion(it) },
+        onHideSubjectSuggestion = { mainViewModel.hideSubjectSuggestion(it) },
         onDeleteInvoice = { mainViewModel.deleteInvoice(it) },
         selectedTabIndex = selectedTabIndex,
         onTabSelected = onTabSelected,
@@ -132,7 +132,7 @@ fun CreateInvoiceContent(
     onUpdateForm: (String?, String?, String?) -> Unit,
     onAddEntry: () -> Unit,
     onInvoiceSelect: (String) -> Unit,
-    onDeleteSubjectSuggestion: (String) -> Unit,
+    onHideSubjectSuggestion: (String) -> Unit,
     onDeleteInvoice: (String) -> Unit,
     selectedTabIndex: Int,
     onTabSelected: (Int) -> Unit,
@@ -349,7 +349,7 @@ fun CreateInvoiceContent(
                                                 )
                                                 IconButton(
                                                     onClick = {
-                                                        onDeleteSubjectSuggestion(
+                                                        onHideSubjectSuggestion(
                                                             selectionOption
                                                         )
                                                     },
@@ -357,8 +357,10 @@ fun CreateInvoiceContent(
                                                 ) {
                                                     Icon(
                                                         imageVector = Icons.Default.Clear,
-                                                        contentDescription = "Löschen",
-                                                        tint = MaterialTheme.colorScheme.error.copy(
+                                                        contentDescription = "Vorschlag ausblenden",
+                                                        // Kein Error-Rot mehr: die Aktion blendet
+                                                        // nur den Vorschlag aus, sie loescht nichts.
+                                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(
                                                             alpha = 0.6f
                                                         ),
                                                         modifier = Modifier.size(16.dp)
@@ -508,7 +510,7 @@ fun CreateInvoicePreview() {
             onUpdateForm = { _, _, _ -> },
             onAddEntry = { },
             onInvoiceSelect = {},
-            onDeleteSubjectSuggestion = {},
+            onHideSubjectSuggestion = {},
             onDeleteInvoice = {},
             selectedTabIndex = 1,
             onTabSelected = {}

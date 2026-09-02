@@ -21,8 +21,8 @@ android {
         applicationId = "de.v404.honorarcraft"
         minSdk = 24
         targetSdk = 36
-        versionCode = 3  // must be changed at new release
-        versionName = "1.3"
+        versionCode = 4  // must be changed at new release
+        versionName = "1.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -59,6 +59,10 @@ android {
         compose = true
         buildConfig = true
     }
+    // MigrationTestHelper liest die exportierten Schemas aus den androidTest-Assets
+    sourceSets.getByName("androidTest") {
+        assets.srcDirs("$projectDir/schemas")
+    }
 }
 
 ksp {
@@ -93,6 +97,7 @@ dependencies {
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.room.testing)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)

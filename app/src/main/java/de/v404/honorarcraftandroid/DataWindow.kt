@@ -1,6 +1,7 @@
 package de.v404.honorarcraftandroid
 
 import android.net.Uri
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -136,7 +137,7 @@ fun DataWindowContent(
                 companyDataState = companyDataState.copy(signaturePath = file.absolutePath)
                 onChanged()
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e("DataWindow", "Signatur konnte nicht kopiert werden", e)
                 Toast.makeText(context, "Fehler beim Kopieren der Signatur", Toast.LENGTH_SHORT).show()
             }
         }
