@@ -39,7 +39,7 @@ class MigrationTest {
      * `ON DELETE CASCADE` von `invoice_entries` nicht auslösen.
      */
     @Test
-    fun migrate4To10_behaeltPositionenUndUebernimmtHonorarsaetze() {
+    fun migrate4To11_behaeltPositionenUndUebernimmtHonorarsaetze() {
         helper.createDatabase(TEST_DB, 4).use { db ->
             db.execSQL("INSERT INTO invoices (invoiceNumber, rate) VALUES ('01', '23.00')")
             db.execSQL("INSERT INTO invoices (invoiceNumber, rate) VALUES ('02', '31.50')")
@@ -57,7 +57,7 @@ class MigrationTest {
             )
         }
 
-        val db = helper.runMigrationsAndValidate(TEST_DB, 10, true, *ALL_MIGRATIONS)
+        val db = helper.runMigrationsAndValidate(TEST_DB, 11, true, *ALL_MIGRATIONS)
 
         db.query("SELECT COUNT(*) FROM invoice_entries").use { c ->
             c.moveToFirst()
@@ -81,7 +81,7 @@ class MigrationTest {
 
     /** 6 → 9 sind reine Versionssprünge ohne Schemaänderung (gleicher identityHash). */
     @Test
-    fun migrate6To10_laeuftDurch() {
+    fun migrate6To11_laeuftDurch() {
         helper.createDatabase(TEST_DB, 6).use { db ->
             db.execSQL("INSERT INTO invoices (invoiceNumber) VALUES ('07')")
             db.execSQL(
@@ -90,7 +90,7 @@ class MigrationTest {
             )
         }
 
-        val db = helper.runMigrationsAndValidate(TEST_DB, 10, true, *ALL_MIGRATIONS)
+        val db = helper.runMigrationsAndValidate(TEST_DB, 11, true, *ALL_MIGRATIONS)
 
         db.query("SELECT teachingSubject FROM invoice_entries").use { c ->
             c.moveToFirst()
@@ -100,15 +100,55 @@ class MigrationTest {
 
     /** Ab 10 gibt es die Tabelle für ausgeblendete Fachvorschläge. */
     @Test
-    fun migrate9To10_legtHiddenSubjectsAn() {
+    fun migrate9To11_legtHiddenSubjectsAn() {
         helper.createDatabase(TEST_DB, 9).close()
 
-        val db = helper.runMigrationsAndValidate(TEST_DB, 10, true, *ALL_MIGRATIONS)
+        val db = helper.runMigrationsAndValidate(TEST_DB, 11, true, *ALL_MIGRATIONS)
 
         db.execSQL("INSERT INTO hidden_subjects (name) VALUES ('Mathe')")
         db.query("SELECT COUNT(*) FROM hidden_subjects").use { c ->
             c.moveToFirst()
             assertEquals(1, c.getInt(0))
+        }
+    }
+
+    /**
+     * 10 → 11 trimmt Bestandsdaten. Der harte Fall ist `hidden_subjects`: dort ist
+     * `name` Primärschlüssel, ein getrimmtes Duplikat darf die Migration nicht
+     * sprengen, sondern muss mit dem vorhandenen Eintrag verschmelzen.
+     */
+    @Test
+    fun migrate10To11_trimmtBestandsdatenUndVerschmilztDuplikate() {
+        helper.createDatabase(TEST_DB, 10).use { db ->
+            db.execSQL("INSERT INTO invoices (invoiceNumber) VALUES ('01')")
+            db.execSQL(
+                "INSERT INTO invoice_entries (invoiceNumber, date, lessonUnits, teachingSubject, rate) " +
+                    "VALUES ('01', '02.09.2026', '2', 'Mathe', '23.00')"
+            )
+            db.execSQL(
+                "INSERT INTO invoice_entries (invoiceNumber, date, lessonUnits, teachingSubject, rate) " +
+                    "VALUES ('01', '03.09.2026 ', '2', 'Mathe ', '23.00')"
+            )
+            // getrimmt und ungetrimmt gleichzeitig -> PK-Kollision beim naiven UPDATE
+            db.execSQL("INSERT INTO hidden_subjects (name) VALUES ('Mathe')")
+            db.execSQL("INSERT INTO hidden_subjects (name) VALUES ('Mathe ')")
+            db.execSQL("INSERT INTO hidden_subjects (name) VALUES ('   ')")
+        }
+
+        val db = helper.runMigrationsAndValidate(TEST_DB, 11, true, *ALL_MIGRATIONS)
+
+        db.query("SELECT COUNT(*) FROM invoice_entries WHERE teachingSubject = 'Mathe'").use { c ->
+            c.moveToFirst()
+            assertEquals("Beide Positionen müssen auf 'Mathe' vereinheitlicht sein", 2, c.getInt(0))
+        }
+        db.query("SELECT COUNT(*) FROM invoice_entries WHERE date = '03.09.2026'").use { c ->
+            c.moveToFirst()
+            assertEquals("Datum muss getrimmt sein", 1, c.getInt(0))
+        }
+        db.query("SELECT name FROM hidden_subjects").use { c ->
+            assertEquals("Duplikat und Leereintrag müssen verschwunden sein", 1, c.count)
+            c.moveToFirst()
+            assertEquals("Mathe", c.getString(0))
         }
     }
 }

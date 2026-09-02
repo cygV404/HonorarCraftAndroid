@@ -118,6 +118,40 @@ val MIGRATION_9_10 = object : Migration(9, 10) {
     }
 }
 
+/**
+ * 10 → 11: Bestandsdaten von führenden/nachfolgenden Leerzeichen befreien.
+ *
+ * Eingaben wurden bis hierher ungetrimmt gespeichert. Folgen: `"Mathe"` und
+ * `"Mathe "` erschienen als zwei identisch aussehende Vorschläge, ein Leerzeichen
+ * im Datum hätte über `date.endsWith(jahr)` den Jahresumsatz verfälscht, und ein
+ * ausgeblendetes Fach liess sich nicht mehr zurückholen, weil der Abgleich exakt
+ * ist. Ab jetzt trimmt [MainViewModel.addEntryFromForm] beim Speichern.
+ *
+ * Keine Schemaänderung, nur Daten – die Tabellenstruktur bleibt identisch.
+ */
+val MIGRATION_10_11 = object : Migration(10, 11) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "UPDATE `invoice_entries` SET `teachingSubject` = TRIM(`teachingSubject`) " +
+                "WHERE `teachingSubject` <> TRIM(`teachingSubject`)"
+        )
+        db.execSQL(
+            "UPDATE `invoice_entries` SET `date` = TRIM(`date`) " +
+                "WHERE `date` <> TRIM(`date`)"
+        )
+        // `name` ist Primärschlüssel: erst die getrimmte Fassung anlegen (vorhandene
+        // Treffer ignorieren), dann die ungetrimmte entfernen. Ein direktes UPDATE
+        // würde bei bereits existierendem Gegenstück den PK verletzen.
+        db.execSQL(
+            "INSERT OR IGNORE INTO `hidden_subjects` (`name`) " +
+                "SELECT TRIM(`name`) FROM `hidden_subjects` WHERE `name` <> TRIM(`name`)"
+        )
+        db.execSQL("DELETE FROM `hidden_subjects` WHERE `name` <> TRIM(`name`)")
+        // Leere Namen sind nach dem Trimmen wertlos
+        db.execSQL("DELETE FROM `hidden_subjects` WHERE `name` = ''")
+    }
+}
+
 /** Alle Migrationen in einer Liste – auch für den Migrationstest verwendbar. */
 val ALL_MIGRATIONS = arrayOf(
     MIGRATION_3_4,
@@ -127,4 +161,5 @@ val ALL_MIGRATIONS = arrayOf(
     MIGRATION_7_8,
     MIGRATION_8_9,
     MIGRATION_9_10,
+    MIGRATION_10_11,
 )

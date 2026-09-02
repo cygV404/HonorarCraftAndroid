@@ -65,6 +65,14 @@ android {
     }
 }
 
+// Das Schemaverzeichnis ist zugleich KSP-Ausgabe und androidTest-Asset. Gradle kennt
+// diese Abhaengigkeit nicht, deshalb packt der Asset-Merge auf einem frischen Checkout
+// den Stand *vor* dem Export - der Migrationstest scheitert dann mit
+// "Cannot find the schema file in the assets folder".
+tasks.matching { it.name == "mergeDebugAndroidTestAssets" }.configureEach {
+    dependsOn("kspDebugKotlin")
+}
+
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }

@@ -293,14 +293,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      */
     fun hideSubjectSuggestion(subject: String) {
         viewModelScope.launch {
-            invoiceDao.hideSubject(HiddenSubject(subject))
+            invoiceDao.hideSubject(HiddenSubject(subject.trim()))
         }
     }
 
     fun addEntryFromForm() {
-        val datum = _currentDate.value
-        val stunden = _currentHours.value
-        val klasseFach = _currentSubject.value
+        // Durchgaengig getrimmt: ein unsichtbares Leerzeichen im Stundenfeld liess
+        // toBigDecimalOrNull() zuvor scheitern ("Ungültige Stundenzahl", obwohl das
+        // Feld gueltig aussah), im Fachfeld erzeugte es doppelte Vorschlaege, und im
+        // Datumsfeld haette es date.endsWith(jahr) und damit den Jahresumsatz gekippt.
+        val datum = _currentDate.value.trim()
+        val stunden = _currentHours.value.trim()
+        val klasseFach = _currentSubject.value.trim()
 
         if (datum.isBlank() || stunden.isBlank()) return
 
