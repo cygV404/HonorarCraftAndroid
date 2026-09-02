@@ -3,10 +3,19 @@
 
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
 
+    <!--
+        Kein Auto-Backup und kein Geraete-zu-Geraet-Transfer.
+
+        Die Datenbank enthaelt Steuernummer, IBAN, BIC, Kundenanschriften und
+        saemtliche Umsaetze. Mit allowBackup="true" waeren diese Daten in das
+        Google-Drive-Backup des Nutzers geflossen - im Widerspruch zur Zusage im
+        Ueber-Dialog ("Es findet keine Uebertragung an externe Server statt").
+
+        Folge: bei einem Geraetewechsel gehen die Daten verloren. Ein eigener
+        Export/Import ist dafuer der vorgesehene Weg.
+    -->
     <application
-        android:allowBackup="true"
-        android:dataExtractionRules="@xml/data_extraction_rules"
-        android:fullBackupContent="@xml/backup_rules"
+        android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"

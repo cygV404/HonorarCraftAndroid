@@ -61,7 +61,7 @@ android {
     }
     // MigrationTestHelper liest die exportierten Schemas aus den androidTest-Assets
     sourceSets.getByName("androidTest") {
-        assets.srcDirs("$projectDir/schemas")
+        assets.directories.add("$projectDir/schemas")
     }
 }
 
@@ -70,6 +70,15 @@ ksp {
 }
 
 dependencies {
+    constraints {
+        // kotlinx-serialization-core kommt transitiv ueber lifecycle-viewmodel-savedstate
+        // in Version 1.7.3 herein. room-testing 2.8.4 bringt Serializer mit, die gegen
+        // 1.8.x kompiliert sind -> AbstractMethodError im Migrationstest. AGPs
+        // "consistent resolution" pinnt androidTest auf die Versionen des Haupt-Classpath,
+        // die Angleichung muss also hier stehen. Hebt nur an, fuegt nichts Neues hinzu.
+        implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.8.1")
+    }
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.lifecycle.runtime.ktx)
