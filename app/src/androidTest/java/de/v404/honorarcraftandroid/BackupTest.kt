@@ -131,6 +131,70 @@ class BackupTest {
         muell.delete()
     }
 
+    /**
+     * Eine Sicherung aus einer älteren App-Version muss sich einlesen lassen.
+     *
+     * Das ist der eigentliche Zweck des Dateiformats: die Datei wird beim Öffnen
+     * über die Migrationskette auf den aktuellen Stand gehoben. Hier wird eine
+     * Datenbank auf Schema 9 gebaut – dem Stand vor `hidden_subjects` und vor dem
+     * Trimmen – und dann importiert. Das Fach trägt bewusst ein nachgestelltes
+     * Leerzeichen, damit sichtbar wird, dass `MIGRATION_10_11` tatsächlich läuft.
+     */
+    @Test
+    fun import_hebtAeltereSicherungUeberDieMigrationskette() = runBlocking<Unit> {
+        val alt = File(context.cacheDir, "alt_schema9.hcbackup").apply { delete() }
+        android.database.sqlite.SQLiteDatabase.openOrCreateDatabase(alt, null).use { db ->
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `invoices` " +
+                    "(`invoiceNumber` TEXT NOT NULL, PRIMARY KEY(`invoiceNumber`))"
+            )
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `invoice_entries` (" +
+                    "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `invoiceNumber` TEXT NOT NULL, " +
+                    "`date` TEXT NOT NULL, `lessonUnits` TEXT NOT NULL, `teachingSubject` TEXT NOT NULL, " +
+                    "`rate` TEXT NOT NULL, FOREIGN KEY(`invoiceNumber`) REFERENCES `invoices`(`invoiceNumber`) " +
+                    "ON UPDATE NO ACTION ON DELETE CASCADE )"
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_invoice_entries_invoiceNumber` ON `invoice_entries` (`invoiceNumber`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_invoice_entries_teachingSubject` ON `invoice_entries` (`teachingSubject`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_invoice_entries_date` ON `invoice_entries` (`date`)")
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `company_data` (`id` INTEGER NOT NULL, `eduCenter` TEXT NOT NULL, " +
+                    "`locationNr` TEXT NOT NULL, `schoolType` TEXT NOT NULL, `customerSecondNameOrOrga` TEXT NOT NULL, " +
+                    "`customerFirstName` TEXT NOT NULL, `customerPlz` TEXT NOT NULL, `customerCityName` TEXT NOT NULL, " +
+                    "`customerMailBox` TEXT NOT NULL, `customerStreet` TEXT NOT NULL, `customerStreetNumber` TEXT NOT NULL, " +
+                    "`billerSecondName` TEXT NOT NULL, `billerFirstName` TEXT NOT NULL, `billerStreetName` TEXT NOT NULL, " +
+                    "`billerStreetNumber` TEXT NOT NULL, `billerPlzNumber` TEXT NOT NULL, `billerCityName` TEXT NOT NULL, " +
+                    "`taxNumber` TEXT NOT NULL, `billerIban` TEXT NOT NULL, `billerBIC` TEXT NOT NULL, " +
+                    "`rate` TEXT NOT NULL, `signaturePath` TEXT NOT NULL, `pdfPath` TEXT NOT NULL, PRIMARY KEY(`id`))"
+            )
+            db.execSQL("INSERT INTO invoices (invoiceNumber) VALUES ('07')")
+            db.execSQL(
+                "INSERT INTO invoice_entries (invoiceNumber, date, lessonUnits, teachingSubject, rate) " +
+                    "VALUES ('07', '01.09.2026', '3', 'Physik ', '23.00')"
+            )
+            db.version = 9
+        }
+
+        val ergebnis = Backup.import(context, alt.toUri())
+        assertTrue("Alte Sicherung muss lesbar sein: ${ergebnis.exceptionOrNull()}", ergebnis.isSuccess)
+        assertEquals("Die Sicherung wurde als Schema 9 erkannt", 9, ergebnis.getOrNull())
+
+        assertEquals("Die Position muss angekommen sein", 1, anzahlPositionen())
+        assertEquals(
+            "MIGRATION_10_11 muss das Leerzeichen entfernt haben",
+            listOf("Physik"),
+            faecher()
+        )
+        // hidden_subjects entsteht erst in Schema 10 - die Tabelle muss jetzt da sein
+        val db = AppDatabase.getDatabase(context).openHelper.readableDatabase
+        db.query("SELECT COUNT(*) FROM hidden_subjects").use { c ->
+            c.moveToFirst()
+            assertEquals("hidden_subjects muss durch die Migration entstanden sein", 0, c.getInt(0))
+        }
+        alt.delete()
+    }
+
     /** Eine gültige SQLite-Datei ohne unsere Tabellen ist ebenfalls kein Backup. */
     @Test
     fun import_lehntFremdeDatenbankAb() = runBlocking<Unit> {
