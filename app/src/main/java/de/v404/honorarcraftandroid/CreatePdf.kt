@@ -9,7 +9,6 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
-import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
@@ -339,54 +338,40 @@ private fun drawTextWrapped(canvas: Canvas, text: String, x: Float, yStart: Floa
     return y
 }
 
+/**
+ * Schreibt das Dokument ueber den MediaStore nach Dokumente/HonorarCraft.
+ *
+ * Seit minSdk 29 gibt es nur noch diesen Weg: der frueher noetige Zweig fuer
+ * Android 7 bis 9 schrieb direkt in den oeffentlichen Ordner und brauchte dafuer
+ * WRITE_EXTERNAL_STORAGE. Beides ist entfallen.
+ */
 private suspend fun savePdf(context: Context, pdfDocument: PdfDocument, fileName: String, onFinished: (File?) -> Unit): Boolean {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-        val contentValues = ContentValues().apply {
-            put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
-            put(MediaStore.MediaColumns.MIME_TYPE, "application/pdf")
-            put(MediaStore.MediaColumns.RELATIVE_PATH, "${Environment.DIRECTORY_DOCUMENTS}/HonorarCraft")
+    val contentValues = ContentValues().apply {
+        put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+        put(MediaStore.MediaColumns.MIME_TYPE, "application/pdf")
+        put(MediaStore.MediaColumns.RELATIVE_PATH, "${Environment.DIRECTORY_DOCUMENTS}/HonorarCraft")
+    }
+    val resolver = context.contentResolver
+    val uri = resolver.insert(MediaStore.Files.getContentUri("external"), contentValues)
+    if (uri == null) {
+        withContext(Dispatchers.Main) {
+            Toast.makeText(context, "Fehler beim Erstellen der Datei im MediaStore", Toast.LENGTH_SHORT).show()
         }
-        val resolver = context.contentResolver
-        val uri = resolver.insert(MediaStore.Files.getContentUri("external"), contentValues)
-        if (uri != null) {
-            try {
-                resolver.openOutputStream(uri)?.use { pdfDocument.writeTo(it) }
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(context, "PDF gespeichert unter Dokumente/HonorarCraft", Toast.LENGTH_LONG).show()
-                }
-                onFinished(null)
-                return true
-            } catch (e: Exception) {
-                Log.e(TAG, "PDF konnte nicht gespeichert werden", e)
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(context, "Fehler beim Speichern: ${e.message}", Toast.LENGTH_SHORT).show()
-                }
-                return false
-            }
-        } else {
-            withContext(Dispatchers.Main) {
-                Toast.makeText(context, "Fehler beim Erstellen der Datei im MediaStore", Toast.LENGTH_SHORT).show()
-            }
-            onFinished(null)
-            return false
+        onFinished(null)
+        return false
+    }
+    return try {
+        resolver.openOutputStream(uri)?.use { pdfDocument.writeTo(it) }
+        withContext(Dispatchers.Main) {
+            Toast.makeText(context, "PDF gespeichert unter Dokumente/HonorarCraft", Toast.LENGTH_LONG).show()
         }
-    } else {
-        val targetDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "HonorarCraft")
-        if (!targetDir.exists()) targetDir.mkdirs()
-        val file = File(targetDir, fileName)
-        try {
-            java.io.FileOutputStream(file).use { pdfDocument.writeTo(it) }
-            withContext(Dispatchers.Main) {
-                Toast.makeText(context, "PDF gespeichert: ${file.absolutePath}", Toast.LENGTH_LONG).show()
-            }
-            onFinished(file)
-            return true
-        } catch (e: Exception) {
-            Log.e(TAG, "PDF konnte nicht gespeichert werden", e)
-            withContext(Dispatchers.Main) {
-                Toast.makeText(context, "Fehler beim Speichern: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
-            return false
+        onFinished(null)
+        true
+    } catch (e: Exception) {
+        Log.e(TAG, "PDF konnte nicht gespeichert werden", e)
+        withContext(Dispatchers.Main) {
+            Toast.makeText(context, "Fehler beim Speichern: ${e.message}", Toast.LENGTH_SHORT).show()
         }
+        false
     }
 }

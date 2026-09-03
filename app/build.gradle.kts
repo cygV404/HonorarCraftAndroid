@@ -19,7 +19,7 @@ android {
 
     defaultConfig {
         applicationId = "de.v404.honorarcraft"
-        minSdk = 24
+        minSdk = 29
         targetSdk = 36
         versionCode = 5  // must be changed at new release
         versionName = "1.5"
