@@ -22,9 +22,6 @@ interface InvoiceDao {
     suspend fun insertEntry(entry: InvoiceEntry)
 
     @Delete
-    suspend fun deleteEntry(entry: InvoiceEntry)
-
-    @Delete
     suspend fun deleteEntries(entries: List<InvoiceEntry>)
 
     @Query("SELECT * FROM invoices WHERE invoiceNumber = :invoiceNumber")
@@ -58,10 +55,6 @@ interface InvoiceDao {
 
     @Query("SELECT invoiceNumber FROM invoices")
     fun getAllInvoiceNumbers(): Flow<List<String>>
-
-    @Transaction
-    @Query("SELECT * FROM invoices")
-    fun getAllInvoicesWithEntries(): Flow<List<InvoiceWithEntries>>
 
     @Transaction
     @Query("""

@@ -46,9 +46,6 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            ndk {
-                debugSymbolLevel = "FULL"
-            }
         }
     }
     compileOptions {
@@ -103,9 +100,6 @@ dependencies {
     implementation(libs.androidx.compose.ui.text.google.fonts)
 
     implementation(libs.androidx.compose.material.icons.extended)
-
-    // Image loading
-    implementation("io.coil-kt:coil-compose:2.7.0")
 
     // Room dependencies
     implementation(libs.androidx.room.runtime)

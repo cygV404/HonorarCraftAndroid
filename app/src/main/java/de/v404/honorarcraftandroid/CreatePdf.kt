@@ -34,8 +34,7 @@ suspend fun createInvoicePdf(
     context: Context,
     invoiceWithEntries: InvoiceWithEntries,
     companyData: CompanyData?,
-    formattedInvoiceNumber: String,
-    onFinished: (File?) -> Unit
+    formattedInvoiceNumber: String
 ): Boolean = withContext(Dispatchers.IO) {
     if (companyData == null) {
         withContext(Dispatchers.Main) {
@@ -307,7 +306,7 @@ suspend fun createInvoicePdf(
         }
 
         val fileName = "Rechnung_$formattedInvoiceNumber.pdf"
-        return@withContext savePdf(context, pdfDocument, fileName, onFinished)
+        return@withContext savePdf(context, pdfDocument, fileName)
     } finally {
         // Muss auch laufen, wenn beim Zeichnen etwas schiefgeht:
         // sonst leckt der native Puffer des PdfDocument.
@@ -345,7 +344,7 @@ private fun drawTextWrapped(canvas: Canvas, text: String, x: Float, yStart: Floa
  * Android 7 bis 9 schrieb direkt in den oeffentlichen Ordner und brauchte dafuer
  * WRITE_EXTERNAL_STORAGE. Beides ist entfallen.
  */
-private suspend fun savePdf(context: Context, pdfDocument: PdfDocument, fileName: String, onFinished: (File?) -> Unit): Boolean {
+private suspend fun savePdf(context: Context, pdfDocument: PdfDocument, fileName: String): Boolean {
     val contentValues = ContentValues().apply {
         put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
         put(MediaStore.MediaColumns.MIME_TYPE, "application/pdf")
@@ -357,7 +356,6 @@ private suspend fun savePdf(context: Context, pdfDocument: PdfDocument, fileName
         withContext(Dispatchers.Main) {
             Toast.makeText(context, "Fehler beim Erstellen der Datei im MediaStore", Toast.LENGTH_SHORT).show()
         }
-        onFinished(null)
         return false
     }
     return try {
@@ -365,7 +363,6 @@ private suspend fun savePdf(context: Context, pdfDocument: PdfDocument, fileName
         withContext(Dispatchers.Main) {
             Toast.makeText(context, "PDF gespeichert unter Dokumente/HonorarCraft", Toast.LENGTH_LONG).show()
         }
-        onFinished(null)
         true
     } catch (e: Exception) {
         Log.e(TAG, "PDF konnte nicht gespeichert werden", e)

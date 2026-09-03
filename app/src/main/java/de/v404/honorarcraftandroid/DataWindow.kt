@@ -2,6 +2,7 @@ package de.v404.honorarcraftandroid
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Log
 import android.widget.Toast
@@ -56,6 +57,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -65,7 +68,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.rememberAsyncImagePainter
 import de.v404.honorarcraftandroid.ui.theme.HonorarCraftAndroidTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -123,6 +125,38 @@ private fun starteAppNeu(context: Context) {
     // die eingelesenen Daten sind dann trotzdem da.
     Runtime.getRuntime().exit(0)
 }
+
+/**
+ * Laedt die Unterschrift als Vorschau-Bitmap.
+ *
+ * Bewusst ohne Coil: die App zeigt genau ein lokales Bild an, und Coil zog dafuer
+ * OkHttp samt Netzwerk-Stack ins APK - in einer App ohne INTERNET-Berechtigung.
+ * Herunterskaliert, weil ein Kamerafoto sonst den Heap belastet; catch(Throwable),
+ * weil OutOfMemoryError ein Error und keine Exception ist.
+ */
+@Composable
+private fun rememberSignaturePreview(pfad: String): ImageBitmap? {
+    return remember(pfad) {
+        pfad.takeIf { it.isNotBlank() && File(it).exists() }?.let { p ->
+            try {
+                val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                BitmapFactory.decodeFile(p, bounds)
+                var sample = 1
+                while (bounds.outWidth > 0 && bounds.outWidth / sample > SIGNATURE_PREVIEW_MAX_WIDTH_PX) {
+                    sample *= 2
+                }
+                BitmapFactory.decodeFile(p, BitmapFactory.Options().apply { inSampleSize = sample })
+                    ?.asImageBitmap()
+            } catch (t: Throwable) {
+                Log.e("DataWindow", "Unterschrift-Vorschau konnte nicht geladen werden", t)
+                null
+            }
+        }
+    }
+}
+
+/** Reicht fuer eine 120 dp hohe Vorschau auch auf sehr dichten Bildschirmen. */
+private const val SIGNATURE_PREVIEW_MAX_WIDTH_PX = 1080
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -516,7 +550,7 @@ fun DataWindowContent(
                         .fillMaxWidth()
                         .padding(vertical = 8.dp)) {
                         Text(
-                            "Unterschrift (PNG)",
+                            "Unterschrift",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -536,14 +570,17 @@ fun DataWindowContent(
                         ) {
                             if (companyDataState.signaturePath.isNotEmpty() && File(companyDataState.signaturePath).exists()) {
                                 Box(modifier = Modifier.fillMaxSize()) {
-                                    Image(
-                                        painter = rememberAsyncImagePainter(File(companyDataState.signaturePath)),
-                                        contentDescription = "Unterschrift Vorschau",
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .padding(8.dp),
-                                        contentScale = ContentScale.Fit
-                                    )
+                                    val vorschau = rememberSignaturePreview(companyDataState.signaturePath)
+                                    if (vorschau != null) {
+                                        Image(
+                                            bitmap = vorschau,
+                                            contentDescription = "Unterschrift Vorschau",
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .padding(8.dp),
+                                            contentScale = ContentScale.Fit
+                                        )
+                                    }
                                     // Delete/Clear Button
                                     IconButton(
                                         onClick = {

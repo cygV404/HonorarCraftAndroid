@@ -474,7 +474,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val formattedNumber = formattedInvoiceNumber.value
                 val success =
-                    createInvoicePdf(context, invoiceWithEntries, companyData, formattedNumber) { _ -> }
+                    createInvoicePdf(context, invoiceWithEntries, companyData, formattedNumber)
                 if (success) {
                     incrementInvoiceNumber()
                 }
